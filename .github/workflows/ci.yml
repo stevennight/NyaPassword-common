@@ -82,7 +82,13 @@ jobs:
 
       - name: Check for Android
         working-directory: common
-        run: cargo check --locked --target aarch64-linux-android -p npw-core -p npw-store-sqlite -p npw-ffi
+        # ring and bundled SQLite compile C code: use the NDK preinstalled on the runner
+        run: |
+          bin="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CC_aarch64_linux_android="$bin/aarch64-linux-android26-clang"
+          export AR_aarch64_linux_android="$bin/llvm-ar"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CC_aarch64_linux_android"
+          cargo check --locked --target aarch64-linux-android -p npw-core -p npw-store-sqlite -p npw-ffi
 
   web:
     name: Web UI (type check, tests, build)

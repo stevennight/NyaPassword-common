@@ -6,3 +6,5 @@
 *.kdbx binary
 *.zip binary
 *.age binary
+# keeps its CRLF line endings on purpose (CSV import test)
+crates/npw-import/tests/fixtures/chrome_passwords.csv -text
