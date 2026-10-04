@@ -25,7 +25,10 @@ impl Client {
         if !self.is_unlocked() {
             return Err(CoreError::Locked);
         }
-        let mut r = HealthReport { checked_at: npw_model::now_ms(), ..Default::default() };
+        let mut r = HealthReport {
+            checked_at: npw_model::now_ms(),
+            ..Default::default()
+        };
         let acc = self.account()?;
         for v in &acc.vaults {
             let vk = self.vault_key(&v.id)?;
@@ -44,7 +47,11 @@ impl Client {
                         }
                         Err(e) => {
                             fine = false;
-                            r.problems.push((v.id.clone(), li.item_id.clone(), format!("server revision {}: {e}", s.revision)));
+                            r.problems.push((
+                                v.id.clone(),
+                                li.item_id.clone(),
+                                format!("server revision {}: {e}", s.revision),
+                            ));
                         }
                     }
                 }
@@ -52,7 +59,11 @@ impl Client {
                     r.pending += 1;
                     if let Some(reason) = &p.rejected {
                         r.rejected += 1;
-                        r.problems.push((v.id.clone(), li.item_id.clone(), format!("edit refused by the server: {reason}")));
+                        r.problems.push((
+                            v.id.clone(),
+                            li.item_id.clone(),
+                            format!("edit refused by the server: {reason}"),
+                        ));
                     }
                     match decrypt_pending(&vk, &v.id, &li.item_id, p) {
                         Ok(d) => {
@@ -62,7 +73,11 @@ impl Client {
                         }
                         Err(e) => {
                             fine = false;
-                            r.problems.push((v.id.clone(), li.item_id.clone(), format!("local edit: {e}")));
+                            r.problems.push((
+                                v.id.clone(),
+                                li.item_id.clone(),
+                                format!("local edit: {e}"),
+                            ));
                         }
                     }
                 }

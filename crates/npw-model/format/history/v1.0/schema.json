@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nyapassword.invalid/schema/item/1.0",
+  "title": "NyaPassword item content, format 1.0",
+  "description": "Plaintext of one item revision before encryption. Unknown keys are allowed everywhere and must be preserved by clients (additionalProperties is true on every object). Times are milliseconds since the Unix epoch (UTC).",
+  "type": "object",
+  "required": ["format", "template"],
+  "additionalProperties": true,
+  "properties": {
+    "format": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "template": { "type": "string", "description": "login, password, secure_note, credit_card, bank_account, identity, document, ssh_key, server, database, api_credential, wifi, software_license, crypto_wallet, or a newer/custom id" },
+    "title": { "type": "string" },
+    "favorite": { "type": "boolean" },
+    "archived": { "type": "boolean" },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "Nested tags use '/'" },
+    "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "sections": { "type": "array", "items": { "$ref": "#/$defs/section" } },
+    "urls": { "type": "array", "items": { "$ref": "#/$defs/url" } },
+    "passkeys": { "type": "array", "items": { "$ref": "#/$defs/passkey" } },
+    "notes": { "type": "string" },
+    "attachments": { "type": "array", "items": { "$ref": "#/$defs/attachment" } },
+    "history": { "type": "array", "items": { "$ref": "#/$defs/history" } },
+    "autofill": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": { "auto_submit": { "type": "boolean" }, "never": { "type": "boolean" } }
+    },
+    "ssh": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": { "confirm_each_use": { "type": "boolean" }, "git_signing": { "type": "boolean" } }
+    },
+    "conflicts": { "type": "array", "items": { "$ref": "#/$defs/conflict" } },
+    "import": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Set on imported items: batch id, source, time",
+      "properties": { "batch": { "type": "string" }, "source": { "type": "string" }, "at": { "type": "integer" } }
+    },
+    "created_at": { "type": "integer" },
+    "updated_at": { "type": "integer" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "description": "Stable within the item; template fields use fixed ids (username, password, otp, ...), others random" },
+    "field": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string" },
+        "kind": { "type": "string", "description": "text, multiline, concealed, pin, email, phone, url, date (YYYY-MM-DD), month_year (YYYY-MM), number, totp, address, reference, file, boolean, or newer" },
+        "purpose": { "type": "string", "description": "Autofill meaning: username, password, otp, email, phone, name, cc-name, cc-number, cc-exp, cc-csc, address, ssh-private-key, ssh-public-key" },
+        "value": { "description": "A string for every kind except address (an object: country, province, city, district, street, postal_code)" },
+        "section": { "type": "string" },
+        "multiline": { "type": "boolean" },
+        "generator": { "type": "object" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": { "id": { "$ref": "#/$defs/id" }, "label": { "type": "string" } }
+    },
+    "url": {
+      "type": "object",
+      "required": ["id", "url"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "url": { "type": "string", "description": "A web URL, a bare host[:port], or androidapp://<package>" },
+        "match": { "type": "string", "enum": ["domain", "host", "starts_with", "exact", "regex", "never"] },
+        "cert_sha256": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "passkey": {
+      "type": "object",
+      "required": ["id", "rp_id", "credential_id", "private_key"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "rp_id": { "type": "string" },
+        "credential_id": { "type": "string", "description": "base64url" },
+        "user_handle": { "type": "string", "description": "base64url" },
+        "user_name": { "type": "string" },
+        "user_display_name": { "type": "string" },
+        "rp_name": { "type": "string" },
+        "alg": { "type": "integer", "description": "COSE algorithm, -7 = ES256" },
+        "private_key": { "type": "string", "description": "PKCS#8 DER, base64url" },
+        "counter": { "type": "integer", "minimum": 0 },
+        "discoverable": { "type": "boolean" },
+        "created_at": { "type": "integer" }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "required": ["id", "name", "key"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string" },
+        "size": { "type": "integer", "minimum": 0 },
+        "mime": { "type": "string" },
+        "key": { "type": "string", "description": "The attachment's own 32-byte key, base64url" },
+        "blob_sha256": { "type": "string", "description": "hex SHA-256 of the encrypted blob" },
+        "created_at": { "type": "integer" }
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": ["id", "field", "value", "until"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "field": { "type": "string" },
+        "label": { "type": "string" },
+        "value": {},
+        "until": { "type": "integer" }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "required": ["id", "path", "value", "at"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "path": { "type": "string", "description": "e.g. fields/password/value, title, notes; empty = the whole item" },
+        "label": { "type": "string" },
+        "value": { "description": "The value that was not kept" },
+        "kept": { "description": "The value that was kept when the conflict was recorded" },
+        "device": { "type": "string" },
+        "at": { "type": "integer" }
+      }
+    }
+  }
+}

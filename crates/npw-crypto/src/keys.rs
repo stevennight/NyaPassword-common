@@ -52,7 +52,10 @@ impl AccountKeyPair {
     pub fn generate() -> Self {
         let secret = x25519_dalek::StaticSecret::random_from_rng(rand::rngs::OsRng);
         let public = x25519_dalek::PublicKey::from(&secret).to_bytes();
-        Self { secret: Key32::from_bytes(secret.to_bytes()), public }
+        Self {
+            secret: Key32::from_bytes(secret.to_bytes()),
+            public,
+        }
     }
 
     pub fn from_secret(secret: Key32) -> Self {

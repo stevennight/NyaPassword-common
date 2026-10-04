@@ -12,7 +12,9 @@ pub mod item;
 pub mod merge;
 pub mod template;
 
-pub use format::{decode_item, encode_item, DecodedItem, FORMAT_MAJOR, FORMAT_MINOR, FORMAT_VERSION};
+pub use format::{
+    decode_item, encode_item, DecodedItem, FORMAT_MAJOR, FORMAT_MINOR, FORMAT_VERSION,
+};
 pub use item::*;
 pub use merge::{merge_items, MergeOutcome};
 pub use template::{template, templates, Template, TemplateField};

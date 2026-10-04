@@ -41,12 +41,19 @@ pub fn encrypt(key: &Key32, aad: &[u8], plaintext: &[u8]) -> Vec<u8> {
     out.push(VERSION);
     out.push(ALG_XCHACHA20POLY1305_STREAM);
     out.extend_from_slice(&prefix);
-    let chunks: Vec<&[u8]> = if plaintext.is_empty() { vec![&[][..]] } else { plaintext.chunks(CHUNK).collect() };
+    let chunks: Vec<&[u8]> = if plaintext.is_empty() {
+        vec![&[][..]]
+    } else {
+        plaintext.chunks(CHUNK).collect()
+    };
     let n = chunks.len();
     for (i, chunk) in chunks.into_iter().enumerate() {
         let counter = u32::try_from(i).expect("attachments are far below 4 PiB");
         let ct = cipher
-            .encrypt(XNonce::from_slice(&nonce(&prefix, counter, i + 1 == n)), Payload { msg: chunk, aad })
+            .encrypt(
+                XNonce::from_slice(&nonce(&prefix, counter, i + 1 == n)),
+                Payload { msg: chunk, aad },
+            )
             .expect("in-memory encryption cannot fail");
         out.extend_from_slice(&ct);
     }
@@ -75,7 +82,10 @@ pub fn decrypt(key: &Key32, aad: &[u8], data: &[u8]) -> Result<Vec<u8>> {
         }
         let counter = u32::try_from(i).map_err(|_| CryptoError::Malformed)?;
         let pt = cipher
-            .decrypt(XNonce::from_slice(&nonce(&prefix, counter, i + 1 == n)), Payload { msg: chunk, aad })
+            .decrypt(
+                XNonce::from_slice(&nonce(&prefix, counter, i + 1 == n)),
+                Payload { msg: chunk, aad },
+            )
             .map_err(|_| CryptoError::Decrypt)?;
         out.extend_from_slice(&pt);
     }

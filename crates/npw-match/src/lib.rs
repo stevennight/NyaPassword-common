@@ -59,7 +59,11 @@ pub fn parse(input: &str) -> Option<Target> {
         let pkg = pkg.trim_end_matches('/').to_string();
         return (!pkg.is_empty()).then_some(Target::App { package: pkg });
     }
-    let with_scheme = if s.contains("://") { s.to_string() } else { format!("https://{s}") };
+    let with_scheme = if s.contains("://") {
+        s.to_string()
+    } else {
+        format!("https://{s}")
+    };
     let u = url::Url::parse(&with_scheme).ok()?;
     let host = match u.host()? {
         url::Host::Domain(d) => d.trim_end_matches('.').to_lowercase(),
@@ -70,7 +74,13 @@ pub fn parse(input: &str) -> Option<Target> {
         return None;
     }
     let domain = registrable(&host);
-    Some(Target::Web { scheme: u.scheme().to_string(), port: u.port(), full: u.to_string(), domain, host })
+    Some(Target::Web {
+        scheme: u.scheme().to_string(),
+        port: u.port(),
+        full: u.to_string(),
+        domain,
+        host,
+    })
 }
 
 /// User-defined and built-in groups of domains that share logins.
@@ -92,7 +102,10 @@ impl Equivalents {
 
     /// The built-in groups plus `custom`.
     pub fn with_builtin(custom: &[Vec<String>]) -> Self {
-        let mut all: Vec<Vec<String>> = BUILTIN_EQUIVALENTS.iter().map(|g| g.iter().map(|d| d.to_string()).collect()).collect();
+        let mut all: Vec<Vec<String>> = BUILTIN_EQUIVALENTS
+            .iter()
+            .map(|g| g.iter().map(|d| d.to_string()).collect())
+            .collect();
         all.extend_from_slice(custom);
         Self::new(&all)
     }
@@ -107,8 +120,22 @@ impl Equivalents {
 
 /// Domains that are known to share one account system.
 pub const BUILTIN_EQUIVALENTS: &[&[&str]] = &[
-    &["taobao.com", "tmall.com", "alipay.com", "1688.com", "aliyun.com", "alibabacloud.com", "fliggy.com"],
-    &["qq.com", "tencent.com", "weixin.qq.com", "wechat.com", "tenpay.com"],
+    &[
+        "taobao.com",
+        "tmall.com",
+        "alipay.com",
+        "1688.com",
+        "aliyun.com",
+        "alibabacloud.com",
+        "fliggy.com",
+    ],
+    &[
+        "qq.com",
+        "tencent.com",
+        "weixin.qq.com",
+        "wechat.com",
+        "tenpay.com",
+    ],
     &["baidu.com", "hao123.com"],
     &["jd.com", "jd.hk", "jdpay.com"],
     &["163.com", "126.com", "yeah.net", "netease.com"],
@@ -117,7 +144,15 @@ pub const BUILTIN_EQUIVALENTS: &[&[&str]] = &[
     &["mi.com", "xiaomi.com"],
     &["huawei.com", "huaweicloud.com", "vmall.com"],
     &["google.com", "google.com.hk", "youtube.com", "gmail.com"],
-    &["microsoft.com", "live.com", "outlook.com", "office.com", "microsoftonline.com", "xbox.com", "bing.com"],
+    &[
+        "microsoft.com",
+        "live.com",
+        "outlook.com",
+        "office.com",
+        "microsoftonline.com",
+        "xbox.com",
+        "bing.com",
+    ],
     &["apple.com", "icloud.com", "icloud.com.cn"],
     &["amazon.com", "amazon.cn", "amazon.co.jp"],
     &["github.com", "githubusercontent.com"],
@@ -139,10 +174,24 @@ pub fn matches(stored: &str, mode: &str, target: &Target, eq: &Equivalents) -> O
     }
     let s = parse(stored)?;
     match (&s, target) {
-        (Target::App { package: a }, Target::App { package: b }) => (a == b).then_some(Quality::Exact),
+        (Target::App { package: a }, Target::App { package: b }) => {
+            (a == b).then_some(Quality::Exact)
+        }
         (
-            Target::Web { scheme: ss, host: sh, port: sp, full: sf, domain: sd },
-            Target::Web { scheme: ts, host: th, port: tp, full: tf, domain: td },
+            Target::Web {
+                scheme: ss,
+                host: sh,
+                port: sp,
+                full: sf,
+                domain: sd,
+            },
+            Target::Web {
+                scheme: ts,
+                host: th,
+                port: tp,
+                full: tf,
+                domain: td,
+            },
         ) => {
             // Never fill a password saved for https into plain http on another host.
             match mode {
@@ -172,14 +221,24 @@ pub fn matches(stored: &str, mode: &str, target: &Target, eq: &Equivalents) -> O
 }
 
 /// Best match among an item's URLs.
-pub fn best_match<'a>(urls: impl IntoIterator<Item = (&'a str, &'a str)>, target: &Target, eq: &Equivalents) -> Option<Quality> {
-    urls.into_iter().filter_map(|(u, m)| matches(u, m, target, eq)).max()
+pub fn best_match<'a>(
+    urls: impl IntoIterator<Item = (&'a str, &'a str)>,
+    target: &Target,
+    eq: &Equivalents,
+) -> Option<Quality> {
+    urls.into_iter()
+        .filter_map(|(u, m)| matches(u, m, target, eq))
+        .max()
 }
 
 /// The text shown for a URL in lists: the host (or package).
 pub fn display_host(input: &str) -> String {
     match parse(input) {
-        Some(Target::Web { host, port: Some(p), .. }) => format!("{host}:{p}"),
+        Some(Target::Web {
+            host,
+            port: Some(p),
+            ..
+        }) => format!("{host}:{p}"),
         Some(Target::Web { host, .. }) => host,
         Some(Target::App { package }) => package,
         None => input.to_string(),
@@ -197,39 +256,182 @@ mod tests {
     #[test]
     fn domain_mode() {
         let eq = Equivalents::with_builtin(&[]);
-        assert_eq!(matches("https://github.com/login", "domain", &t("https://gist.github.com/x"), &eq), Some(Quality::Domain));
-        assert_eq!(matches("https://github.com", "domain", &t("https://github.com/a"), &eq), Some(Quality::Host));
-        assert_eq!(matches("https://github.com", "domain", &t("https://github.com.evil.example/"), &eq), None);
-        assert_eq!(matches("https://github.com", "domain", &t("https://githuh.com"), &eq), None);
+        assert_eq!(
+            matches(
+                "https://github.com/login",
+                "domain",
+                &t("https://gist.github.com/x"),
+                &eq
+            ),
+            Some(Quality::Domain)
+        );
+        assert_eq!(
+            matches(
+                "https://github.com",
+                "domain",
+                &t("https://github.com/a"),
+                &eq
+            ),
+            Some(Quality::Host)
+        );
+        assert_eq!(
+            matches(
+                "https://github.com",
+                "domain",
+                &t("https://github.com.evil.example/"),
+                &eq
+            ),
+            None
+        );
+        assert_eq!(
+            matches(
+                "https://github.com",
+                "domain",
+                &t("https://githuh.com"),
+                &eq
+            ),
+            None
+        );
         // public suffixes: two different sites under the same suffix never match
-        assert_eq!(matches("https://alice.github.io", "domain", &t("https://bob.github.io"), &eq), None);
-        assert_eq!(matches("https://a.example.com.cn", "domain", &t("https://b.example.com.cn"), &eq), Some(Quality::Domain));
+        assert_eq!(
+            matches(
+                "https://alice.github.io",
+                "domain",
+                &t("https://bob.github.io"),
+                &eq
+            ),
+            None
+        );
+        assert_eq!(
+            matches(
+                "https://a.example.com.cn",
+                "domain",
+                &t("https://b.example.com.cn"),
+                &eq
+            ),
+            Some(Quality::Domain)
+        );
         // no downgrade from https to http
-        assert_eq!(matches("https://www.example.com", "domain", &t("http://login.example.com"), &eq), None);
+        assert_eq!(
+            matches(
+                "https://www.example.com",
+                "domain",
+                &t("http://login.example.com"),
+                &eq
+            ),
+            None
+        );
     }
 
     #[test]
     fn ips_ports_and_bare_hosts() {
         let eq = Equivalents::default();
-        assert_eq!(matches("192.168.1.1:8080", "domain", &t("http://192.168.1.1:8080/login"), &eq), Some(Quality::Host));
-        assert_eq!(matches("192.168.1.1:8080", "domain", &t("http://192.168.1.1:9090/"), &eq), None);
-        assert_eq!(matches("192.168.1.1", "domain", &t("http://192.168.1.2/"), &eq), None);
-        assert_eq!(matches("http://nas:5000", "domain", &t("http://nas:5000/x"), &eq), Some(Quality::Host));
-        assert_eq!(matches("https://vault.example.com:8443", "host", &t("https://vault.example.com/"), &eq), None);
+        assert_eq!(
+            matches(
+                "192.168.1.1:8080",
+                "domain",
+                &t("http://192.168.1.1:8080/login"),
+                &eq
+            ),
+            Some(Quality::Host)
+        );
+        assert_eq!(
+            matches(
+                "192.168.1.1:8080",
+                "domain",
+                &t("http://192.168.1.1:9090/"),
+                &eq
+            ),
+            None
+        );
+        assert_eq!(
+            matches("192.168.1.1", "domain", &t("http://192.168.1.2/"), &eq),
+            None
+        );
+        assert_eq!(
+            matches("http://nas:5000", "domain", &t("http://nas:5000/x"), &eq),
+            Some(Quality::Host)
+        );
+        assert_eq!(
+            matches(
+                "https://vault.example.com:8443",
+                "host",
+                &t("https://vault.example.com/"),
+                &eq
+            ),
+            None
+        );
     }
 
     #[test]
     fn other_modes_and_equivalents() {
         let eq = Equivalents::with_builtin(&[vec!["example.com".into(), "example.org".into()]]);
-        assert_eq!(matches("https://www.taobao.com", "domain", &t("https://login.tmall.com"), &eq), Some(Quality::Equivalent));
-        assert_eq!(matches("https://example.com", "domain", &t("https://example.org"), &eq), Some(Quality::Equivalent));
-        assert_eq!(matches("https://a.com/x", "starts_with", &t("https://a.com/x/y"), &eq), Some(Quality::StartsWith));
-        assert_eq!(matches("https://a.com/x", "starts_with", &t("https://a.com/y"), &eq), None);
-        assert_eq!(matches("https://a.com/x", "exact", &t("https://a.com/x"), &eq), Some(Quality::Exact));
-        assert_eq!(matches(r"^https://[a-z]+\.a\.com/", "regex", &t("https://x.a.com/p"), &eq), Some(Quality::Exact));
-        assert_eq!(matches("https://a.com", "never", &t("https://a.com"), &eq), None);
-        assert_eq!(matches("androidapp://com.github.android", "domain", &t("androidapp://com.github.android"), &eq), Some(Quality::Exact));
-        assert_eq!(matches("https://github.com", "domain", &t("androidapp://com.github.android"), &eq), None);
+        assert_eq!(
+            matches(
+                "https://www.taobao.com",
+                "domain",
+                &t("https://login.tmall.com"),
+                &eq
+            ),
+            Some(Quality::Equivalent)
+        );
+        assert_eq!(
+            matches(
+                "https://example.com",
+                "domain",
+                &t("https://example.org"),
+                &eq
+            ),
+            Some(Quality::Equivalent)
+        );
+        assert_eq!(
+            matches(
+                "https://a.com/x",
+                "starts_with",
+                &t("https://a.com/x/y"),
+                &eq
+            ),
+            Some(Quality::StartsWith)
+        );
+        assert_eq!(
+            matches("https://a.com/x", "starts_with", &t("https://a.com/y"), &eq),
+            None
+        );
+        assert_eq!(
+            matches("https://a.com/x", "exact", &t("https://a.com/x"), &eq),
+            Some(Quality::Exact)
+        );
+        assert_eq!(
+            matches(
+                r"^https://[a-z]+\.a\.com/",
+                "regex",
+                &t("https://x.a.com/p"),
+                &eq
+            ),
+            Some(Quality::Exact)
+        );
+        assert_eq!(
+            matches("https://a.com", "never", &t("https://a.com"), &eq),
+            None
+        );
+        assert_eq!(
+            matches(
+                "androidapp://com.github.android",
+                "domain",
+                &t("androidapp://com.github.android"),
+                &eq
+            ),
+            Some(Quality::Exact)
+        );
+        assert_eq!(
+            matches(
+                "https://github.com",
+                "domain",
+                &t("androidapp://com.github.android"),
+                &eq
+            ),
+            None
+        );
     }
 
     #[test]

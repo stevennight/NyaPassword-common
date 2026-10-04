@@ -26,12 +26,38 @@ pub struct Template {
     pub fields: &'static [TemplateField],
 }
 
-const fn f(id: &'static str, kind: &'static str, purpose: Option<&'static str>, zh: &'static str, en: &'static str) -> TemplateField {
-    TemplateField { id, kind, purpose, multiline: false, zh, en }
+const fn f(
+    id: &'static str,
+    kind: &'static str,
+    purpose: Option<&'static str>,
+    zh: &'static str,
+    en: &'static str,
+) -> TemplateField {
+    TemplateField {
+        id,
+        kind,
+        purpose,
+        multiline: false,
+        zh,
+        en,
+    }
 }
 
-const fn ml(id: &'static str, kind: &'static str, purpose: Option<&'static str>, zh: &'static str, en: &'static str) -> TemplateField {
-    TemplateField { id, kind, purpose, multiline: true, zh, en }
+const fn ml(
+    id: &'static str,
+    kind: &'static str,
+    purpose: Option<&'static str>,
+    zh: &'static str,
+    en: &'static str,
+) -> TemplateField {
+    TemplateField {
+        id,
+        kind,
+        purpose,
+        multiline: true,
+        zh,
+        en,
+    }
 }
 
 use kind::*;
@@ -49,8 +75,26 @@ pub const TEMPLATES: &[Template] = &[
             f("otp", TOTP, Some(p::OTP), "一次性密码", "One-time password"),
         ],
     },
-    Template { id: "password", zh: "密码", en: "Password", icon: "password", fields: &[f("password", CONCEALED, Some(p::PASSWORD), "密码", "Password")] },
-    Template { id: "secure_note", zh: "安全笔记", en: "Secure note", icon: "note", fields: &[] },
+    Template {
+        id: "password",
+        zh: "密码",
+        en: "Password",
+        icon: "password",
+        fields: &[f(
+            "password",
+            CONCEALED,
+            Some(p::PASSWORD),
+            "密码",
+            "Password",
+        )],
+    },
+    Template {
+        id: "secure_note",
+        zh: "安全笔记",
+        en: "Secure note",
+        icon: "note",
+        fields: &[],
+    },
     Template {
         id: "credit_card",
         zh: "银行卡",
@@ -60,7 +104,13 @@ pub const TEMPLATES: &[Template] = &[
             f("cardholder", TEXT, Some(p::CC_NAME), "持卡人", "Cardholder"),
             f("number", CONCEALED, Some(p::CC_NUMBER), "卡号", "Number"),
             f("expiry", MONTH_YEAR, Some(p::CC_EXP), "有效期", "Expiry"),
-            f("cvv", CONCEALED, Some(p::CC_CSC), "CVV", "Verification number"),
+            f(
+                "cvv",
+                CONCEALED,
+                Some(p::CC_CSC),
+                "CVV",
+                "Verification number",
+            ),
             f("pin", PIN, None, "交易密码", "PIN"),
             f("card_type", TEXT, None, "卡类型", "Type"),
             f("bank", TEXT, None, "开户行", "Issuing bank"),
@@ -75,11 +125,41 @@ pub const TEMPLATES: &[Template] = &[
         fields: &[
             f("bank", TEXT, None, "开户行 / 支行", "Bank / branch"),
             f("account_number", CONCEALED, None, "账号", "Account number"),
-            f("account_name", TEXT, Some(p::NAME), "户名", "Account holder"),
-            f("online_login", TEXT, Some(p::USERNAME), "网银登录名", "Online banking login"),
-            f("online_password", CONCEALED, Some(p::PASSWORD), "登录密码", "Online banking password"),
-            f("payment_password", PIN, None, "支付密码", "Payment password"),
-            f("ukey_password", CONCEALED, None, "U 盾 / 证书密码", "Security key password"),
+            f(
+                "account_name",
+                TEXT,
+                Some(p::NAME),
+                "户名",
+                "Account holder",
+            ),
+            f(
+                "online_login",
+                TEXT,
+                Some(p::USERNAME),
+                "网银登录名",
+                "Online banking login",
+            ),
+            f(
+                "online_password",
+                CONCEALED,
+                Some(p::PASSWORD),
+                "登录密码",
+                "Online banking password",
+            ),
+            f(
+                "payment_password",
+                PIN,
+                None,
+                "支付密码",
+                "Payment password",
+            ),
+            f(
+                "ukey_password",
+                CONCEALED,
+                None,
+                "U 盾 / 证书密码",
+                "Security key password",
+            ),
             f("phone", PHONE, None, "预留手机号", "Phone on file"),
             f("swift", TEXT, None, "SWIFT / 联行号", "SWIFT / routing"),
         ],
@@ -118,8 +198,20 @@ pub const TEMPLATES: &[Template] = &[
         en: "SSH key",
         icon: "ssh",
         fields: &[
-            ml("private_key", CONCEALED, Some(p::SSH_PRIVATE_KEY), "私钥", "Private key"),
-            ml("public_key", MULTILINE, Some(p::SSH_PUBLIC_KEY), "公钥", "Public key"),
+            ml(
+                "private_key",
+                CONCEALED,
+                Some(p::SSH_PRIVATE_KEY),
+                "私钥",
+                "Private key",
+            ),
+            ml(
+                "public_key",
+                MULTILINE,
+                Some(p::SSH_PUBLIC_KEY),
+                "公钥",
+                "Public key",
+            ),
             f("fingerprint", TEXT, None, "指纹", "Fingerprint"),
             f("key_type", TEXT, None, "类型", "Key type"),
             f("passphrase", CONCEALED, None, "私钥口令", "Passphrase"),
@@ -159,8 +251,20 @@ pub const TEMPLATES: &[Template] = &[
         en: "API credential",
         icon: "api",
         fields: &[
-            f("username", TEXT, Some(p::USERNAME), "用户名 / Key ID", "Username / key ID"),
-            ml("credential", CONCEALED, Some(p::PASSWORD), "凭据", "Credential"),
+            f(
+                "username",
+                TEXT,
+                Some(p::USERNAME),
+                "用户名 / Key ID",
+                "Username / key ID",
+            ),
+            ml(
+                "credential",
+                CONCEALED,
+                Some(p::PASSWORD),
+                "凭据",
+                "Credential",
+            ),
             f("endpoint", URL, None, "地址", "Endpoint"),
             f("expires_on", DATE, None, "过期时间", "Expires on"),
         ],
@@ -196,8 +300,20 @@ pub const TEMPLATES: &[Template] = &[
         en: "Crypto wallet",
         icon: "wallet",
         fields: &[
-            ml("recovery_phrase", CONCEALED, None, "助记词", "Recovery phrase"),
-            f("password", CONCEALED, Some(p::PASSWORD), "钱包密码", "Wallet password"),
+            ml(
+                "recovery_phrase",
+                CONCEALED,
+                None,
+                "助记词",
+                "Recovery phrase",
+            ),
+            f(
+                "password",
+                CONCEALED,
+                Some(p::PASSWORD),
+                "钱包密码",
+                "Wallet password",
+            ),
             f("address", TEXT, None, "地址", "Address"),
         ],
     },
@@ -205,8 +321,20 @@ pub const TEMPLATES: &[Template] = &[
 
 /// Field presets the "add field" menu offers on every template.
 pub const EXTRA_FIELD_PRESETS: &[TemplateField] = &[
-    ml("recovery_codes", CONCEALED, None, "恢复码", "Recovery codes"),
-    f("security_question", CONCEALED, None, "密保问题答案", "Security answer"),
+    ml(
+        "recovery_codes",
+        CONCEALED,
+        None,
+        "恢复码",
+        "Recovery codes",
+    ),
+    f(
+        "security_question",
+        CONCEALED,
+        None,
+        "密保问题答案",
+        "Security answer",
+    ),
     f("phone", PHONE, None, "手机号", "Phone"),
     f("email", EMAIL, None, "邮箱", "Email"),
 ];
@@ -253,7 +381,10 @@ impl Template {
         let mut item = ItemContent::new(self.id, "");
         item.fields = self.fields.iter().map(|tf| tf.to_field(locale)).collect();
         if self.id == "ssh_key" {
-            item.ssh = Some(SshSettings { confirm_each_use: true, ..Default::default() });
+            item.ssh = Some(SshSettings {
+                confirm_each_use: true,
+                ..Default::default()
+            });
         }
         item
     }

@@ -1,6 +1,33 @@
 [package]
 name = "npw-ssh"
+description = "NyaPassword SSH keys: OpenSSH/PKCS#8 parsing, key generation, fingerprints, ssh-agent protocol, SSHSIG"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+base64.workspace = true
+hex.workspace = true
+sha1 = { workspace = true, features = ["oid"] }
+sha2 = { workspace = true, features = ["oid"] }
+rand_core.workspace = true
+zeroize.workspace = true
+ed25519-dalek.workspace = true
+p256.workspace = true
+p384 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+rsa = { version = "0.9", features = ["sha2"] }
+# ssh-key 0.6 is the generation built on ed25519-dalek 2 / p256 0.13 / rsa 0.9.
+ssh-key = { version = "0.6", default-features = false, features = ["std", "alloc", "ecdsa", "ed25519", "p256", "p384", "rsa", "encryption", "rand_core", "getrandom"] }
+# Encrypted PKCS#8 (PBES2) and legacy OpenSSL-encrypted PEM ("Proc-Type: 4,ENCRYPTED").
+pkcs8 = { version = "0.10", features = ["encryption", "pem", "std"] }
+md-5 = "0.10"
+cbc = { version = "0.1", features = ["alloc"] }
+aes = "0.8"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["js"] }
+
+[dev-dependencies]
+rand.workspace = true

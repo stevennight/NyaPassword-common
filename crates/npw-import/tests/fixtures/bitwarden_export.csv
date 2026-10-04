@@ -1,0 +1,7 @@
+folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+Work/Dev,1,login,Example Mail,"note line 1
+note line 2","Account ID: ACC-1
+Recovery: line a
+line b",0,"https://mail.example.com,androidapp://com.example.mail",alice@example.com,mail-pass,JBSWY3DPEHPK3PXP
+,,note,Plain note,Just a note,,1,,,,
+,,login,,,,0,https://untitled.example.org,bob,bob-pass,

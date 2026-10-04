@@ -1,0 +1,269 @@
+{
+  "encrypted": false,
+  "folders": [
+    { "id": "f0000000-0000-4000-8000-000000000001", "name": "Work" },
+    { "id": "f0000000-0000-4000-8000-000000000002", "name": "Work/Dev" },
+    { "id": "f0000000-0000-4000-8000-000000000003", "name": "个人/银行" }
+  ],
+  "items": [
+    {
+      "passwordHistory": [
+        { "lastUsedDate": "2024-03-01T08:00:00.000Z", "password": "old-pass-1" },
+        { "lastUsedDate": "2024-06-01T08:00:00.000Z", "password": "old-pass-2" }
+      ],
+      "revisionDate": "2024-07-01T12:00:00.000Z",
+      "creationDate": "2023-01-15T10:30:00.123Z",
+      "deletedDate": null,
+      "id": "a0000000-0000-4000-8000-000000000001",
+      "organizationId": null,
+      "folderId": "f0000000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Dev Portal",
+      "notes": "line one\nline two\n\n  indented line",
+      "favorite": true,
+      "fields": [
+        { "name": "Recovery codes", "value": "aaaa-bbbb\ncccc-dddd\neeee-ffff", "type": 1, "linkedId": null },
+        { "name": "Account ID", "value": "ACC-42", "type": 0, "linkedId": null },
+        { "name": "Address\nmulti", "value": "1 Example Road\nSample City", "type": 0, "linkedId": null },
+        { "name": "Newsletter", "value": "true", "type": 2, "linkedId": null },
+        { "name": "Beta", "value": "False", "type": 2, "linkedId": null },
+        { "name": "", "value": "no name", "type": 0, "linkedId": null }
+      ],
+      "login": {
+        "fido2Credentials": [
+          {
+            "credentialId": "00112233-4455-6677-8899-aabbccddeeff",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyChRANCAAQAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4_",
+            "rpId": "dev.example.com",
+            "userHandle": "dXNlci1oYW5kbGUtMDAwMQ",
+            "userName": "alice@example.com",
+            "counter": "7",
+            "rpName": "Example Dev",
+            "userDisplayName": "Alice Example",
+            "discoverable": "true",
+            "creationDate": "2024-02-02T02:02:02.000Z"
+          },
+          {
+            "credentialId": "b64.AQIDBAUGBwgJCgsMDQ4PEA",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoM=",
+            "rpId": "example.com",
+            "userHandle": "AAEC",
+            "userName": "alice",
+            "counter": "0",
+            "rpName": "Example",
+            "userDisplayName": "",
+            "discoverable": "false",
+            "creationDate": null
+          }
+        ],
+        "uris": [
+          { "match": null, "uri": "https://dev.example.com/login" },
+          { "match": 0, "uri": "https://example.com" },
+          { "match": 1, "uri": "https://host.example.com:8443" },
+          { "match": 2, "uri": "https://example.com/start" },
+          { "match": 3, "uri": "https://example.com/exact?x=1" },
+          { "match": 4, "uri": "^https://.*\\.example\\.net/" },
+          { "match": 5, "uri": "https://never.example.org" },
+          { "match": null, "uri": "androidapp://com.example.app" }
+        ],
+        "username": "alice@example.com",
+        "password": "Corr3ct-Horse-Battery-Staple!",
+        "totp": "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example",
+        "passwordRevisionDate": "2024-06-01T08:00:00.000Z"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000002",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Linked & Steam",
+      "notes": null,
+      "favorite": false,
+      "fields": [
+        { "name": "Pass alias", "value": null, "type": 3, "linkedId": 101 }
+      ],
+      "login": {
+        "uris": [],
+        "username": "steamer",
+        "password": "s3cret",
+        "totp": "steam://JBSWY3DPEHPK3PXP",
+        "fido2Credentials": []
+      },
+      "collectionIds": null,
+      "revisionDate": "2024-01-01T00:00:00Z",
+      "creationDate": "2024-01-01T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000003",
+      "organizationId": null,
+      "folderId": "f0000000-0000-4000-8000-000000000001",
+      "type": 2,
+      "reprompt": 0,
+      "name": "Wi-Fi notes",
+      "notes": "SSID: example-net\r\nKey: not-a-real-key\r\n",
+      "favorite": false,
+      "secureNote": { "type": 0 },
+      "collectionIds": null,
+      "revisionDate": "2024-01-02T00:00:00Z",
+      "creationDate": "2024-01-02T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000004",
+      "organizationId": null,
+      "folderId": "f0000000-0000-4000-8000-000000000003",
+      "type": 3,
+      "reprompt": 0,
+      "name": "Example Visa",
+      "notes": "",
+      "favorite": false,
+      "card": {
+        "cardholderName": "Alice Example",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "3",
+        "expYear": "2029",
+        "code": "123"
+      },
+      "collectionIds": null,
+      "revisionDate": "2024-01-03T00:00:00Z",
+      "creationDate": "2024-01-03T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000005",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Odd expiry card",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": null,
+        "brand": null,
+        "number": "5500000000000004",
+        "expMonth": "13",
+        "expYear": "soon",
+        "code": null
+      },
+      "collectionIds": null,
+      "revisionDate": "2024-01-04T00:00:00Z",
+      "creationDate": "2024-01-04T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000006",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Alice identity",
+      "notes": "identity notes",
+      "favorite": false,
+      "identity": {
+        "title": "Ms",
+        "firstName": "Alice",
+        "middleName": "Q",
+        "lastName": "Example",
+        "address1": "1 Example Road",
+        "address2": "Unit 2",
+        "address3": null,
+        "city": "Sample City",
+        "state": "Sample State",
+        "postalCode": "00000",
+        "country": "XX",
+        "company": "Example Corp",
+        "email": "alice@example.com",
+        "phone": "+1 555 0100",
+        "ssn": "000-00-0000",
+        "username": "alice-id",
+        "passportNumber": "X0000000",
+        "licenseNumber": "D000-0000"
+      },
+      "collectionIds": null,
+      "revisionDate": "2024-01-05T00:00:00Z",
+      "creationDate": "2024-01-05T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000007",
+      "organizationId": null,
+      "folderId": "f0000000-0000-4000-8000-000000000002",
+      "type": 5,
+      "reprompt": 0,
+      "name": "Deploy key",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nZmFrZS1rZXktbWF0ZXJpYWwtZm9yLXRlc3RzLW9ubHktbm90LWEtcmVhbC1rZXk=\nZmFrZS1rZXktbWF0ZXJpYWwtZm9yLXRlc3RzLW9ubHk=\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGZha2Uta2V5LW1hdGVyaWFsLWZvci10ZXN0cw deploy@example.com",
+        "keyFingerprint": "SHA256:ZmFrZWZpbmdlcnByaW50Zm9ydGVzdHNvbmx5MDAwMDA"
+      },
+      "collectionIds": null,
+      "revisionDate": "2024-01-06T00:00:00Z",
+      "creationDate": "2024-01-06T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000008",
+      "organizationId": "0e000000-0000-4000-8000-000000000001",
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Team shared",
+      "notes": null,
+      "favorite": false,
+      "login": { "uris": [{ "match": 9, "uri": "https://team.example.com" }], "username": "team", "password": "team-pass", "totp": null, "futureLoginKey": "kept" },
+      "collectionIds": ["c0000000-0000-4000-8000-000000000001"],
+      "futureTopLevel": { "nested": 1 },
+      "revisionDate": "2024-01-07T00:00:00Z",
+      "creationDate": "2024-01-07T00:00:00Z",
+      "deletedDate": null
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000009",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Trashed login",
+      "notes": null,
+      "favorite": false,
+      "login": { "uris": [], "username": "gone", "password": "gone" },
+      "collectionIds": null,
+      "revisionDate": "2024-01-08T00:00:00Z",
+      "creationDate": "2024-01-08T00:00:00Z",
+      "deletedDate": "2024-02-08T00:00:00Z"
+    },
+    {
+      "id": "a0000000-0000-4000-8000-00000000000a",
+      "organizationId": null,
+      "folderId": null,
+      "type": 9,
+      "reprompt": 0,
+      "name": "From the future",
+      "notes": "future notes",
+      "favorite": false,
+      "bankAccount": { "accountNumber": "000111222", "bankName": "Example Bank" },
+      "collectionIds": null,
+      "revisionDate": "2024-01-09T00:00:00Z",
+      "creationDate": "2024-01-09T00:00:00Z",
+      "deletedDate": null
+    }
+  ],
+  "collections": [
+    { "id": "c0000000-0000-4000-8000-000000000001", "organizationId": "0e000000-0000-4000-8000-000000000001", "name": "Ops", "externalId": null }
+  ]
+}

@@ -1,0 +1,835 @@
+{
+  "format": "1.0",
+  "kdf": [
+    {
+      "password": "correct horse battery staple",
+      "secret_key": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "account_salt": "WlpaWlpaWlpaWlpaWlpaWg",
+      "params": {
+        "alg": "argon2id",
+        "m": 64,
+        "t": 1,
+        "p": 1
+      },
+      "auk_hex": "b90c7ceebc796578ef32a962111aa15cb5ff8af374be90b0d478dcb077f5889d",
+      "login_hex": "0bdf3a52d055517db685c1fcdb432a2e0ade37018e2af63edda09d46e5baf4cb"
+    },
+    {
+      "password": "café 密码 🐱",
+      "secret_key": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "account_salt": "WlpaWlpaWlpaWlpaWlpaWg",
+      "params": {
+        "alg": "argon2id",
+        "m": 1024,
+        "t": 2,
+        "p": 2
+      },
+      "auk_hex": "0287e7f0398dc2bbd953c9ada01bd8ea31f2f7297f8b9603f2a0d7e364b957b3",
+      "login_hex": "d42573002e1a74087ba05e5c73e573cb0676eada11030e11236c077509da7d33"
+    }
+  ],
+  "account_id": "0192f0c0-0000-7000-8000-000000000001",
+  "vault_id": "0192f0c0-0000-7000-8000-000000000002",
+  "account_key_hex": "0202020202020202020202020202020202020202020202020202020202020202",
+  "auk_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+  "encrypted_account_key": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQG_VIfWRTgHmrmE0fUf1cyDYjWobdgEacvBNEpJm6st3FYduJEfg334dLL8nT81nZc",
+  "vault_key_hex": "0303030303030303030303030303030303030303030303030303030303030303",
+  "wrapped_vault_key": "AQECAgICAgICAgICAgICAgICAgICAgICAgILW9b9ee7ZgOViXlF_bhOgmtL4Wok0e-6TsKMRLKuX1Ul6aAH0oZL5AjWS6B2_Mt4",
+  "items": [
+    {
+      "name": "login",
+      "item_id": "0192f0c0-0000-7000-8000-000000000064",
+      "format_major": 1,
+      "wrapped_key": "AQEUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBTjNlsu2d7SalWaM-MrZwqz2BNAuNmBbi2lXRxcKBlokoq_7U5rFy4lCfxLpmgu61g",
+      "ciphertext": "AQFkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRvvLLvrnmivPGkcmhn2XTZUVN1rHJ73lKD8TzPIsssdQQB1PbeitnpdEch_9GMUBdpyx-EfDJ1HIItW2VHHOjgluCPDEIpaDczmpnuYJ46KyNpakMZ36orgfuculEuoTqaffQGe8lB6VE4lgwLq615j7c53vhGueUj9htkiFrGYBEUCdQ5EWlmljH0-ZNQULscDhtgIP_TtHV72YYXhhyX4dl8KPn91KD-bHCxK2gtru5b6yVzMfD0xcnKSHJh95cp70VXecikvAEzxlw1k2AimFBgXPf4kFuZn8QwItP4v09fXCIxoaJX-2j_HKBhdq9hCi4ycygevwOa34L-rsXtGY-Sg6OCk4xSOgpHKJNMUrT7nhU6SYaitdxVe12TmqTR9jAO66drOagRLWSOrYIc5W5I2iIzctenrwSa8x_faVydLwUGHQXDFvg2cP5HRA4egJoElEwuXkfiXSmlF6-zZGByEqL7FiIhK7t7sfxmkh5vOu6wXfUZDeqB6STHQa_XlfpwilY7eCaQdc8-_FIMQhGn2xnIAxLCf9l3AXUSYEtUVav8eQmmy33cEuJw1OxeUMiSUcsOu3VFCRO8b5dp9WqA6xXZITrB_H1X5xejV3CnpT9WX7Pk0VP86ol7TM9_aQ3p",
+      "plaintext": {
+        "format": "1.0",
+        "template": "login",
+        "title": "登录 示例 0",
+        "fields": [
+          {
+            "id": "username",
+            "label": "用户名",
+            "kind": "text",
+            "purpose": "username",
+            "value": "username-value"
+          },
+          {
+            "id": "password",
+            "label": "密码",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          },
+          {
+            "id": "otp",
+            "label": "一次性密码",
+            "kind": "totp",
+            "purpose": "otp",
+            "value": "otpauth://totp/Example:me?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+          }
+        ],
+        "created_at": 1759536000000,
+        "updated_at": 1759536001000
+      }
+    },
+    {
+      "name": "password",
+      "item_id": "0192f0c0-0000-7000-8000-000000000065",
+      "format_major": 1,
+      "wrapped_key": "AQEVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRXTDgBJu4I87V8-jh5IFCdLJ3XfNgriTuO5mmVMX7dT7VoYczzY5mixnklBX8-KFPY",
+      "ciphertext": "AQFlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVJOmfbUAa_jd-D77DUA0olT8-mQ6xa3VEHZnZkfMsDW47eAmbKx2aczK_GUuzy5DsUVC7cA5KDo4tAYD8FwRdZ5bNR-O8LdgkqKXLo0uLhZTTl9Hhl1quHLwaXKYM7OfFaEu9oXn2z5GKohpHAfeOLGwc8JUcmnkyFSDr0eDXeks1QqzTYkT9KSoUkHodZK6VXZ4r0AcssiTMl_KsxjpHsKIYrT_jIvPl_t57Eglm1YoAfDFYq5IGKlrfk2_f34Rx2yWxj9RiDmMVynDIJV-P-9WObu2N5Ib35PxH1jwdTvE1dGN76Cjonuvt4pogD4blYmTJZwhaN",
+      "plaintext": {
+        "format": "1.0",
+        "template": "password",
+        "title": "密码 示例 1",
+        "fields": [
+          {
+            "id": "password",
+            "label": "Password",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          }
+        ],
+        "created_at": 1759536000001,
+        "updated_at": 1759536001001
+      }
+    },
+    {
+      "name": "secure_note",
+      "item_id": "0192f0c0-0000-7000-8000-000000000066",
+      "format_major": 1,
+      "wrapped_key": "AQEWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYPUQxp1GetEyZHHwF9bKVn0ieo3KSRIKBaR6RkJw9vJ9MDC1LBkBX39CdM3WoMw10",
+      "ciphertext": "AQFmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmYQ991LirpJkyiWMwueoLGLfW_ELhFU8VGArxlCfvW1oXywPer9SZpUv1BIJ5SKSK4qWuhqt22MBHWFU7r0u7X_tZMWpGlKnufD4AHpLfVRho84vDY1Xe5GEFiV-tRmtdEA5hcNs7WzWL0qlGWZLuanHvDd9yFUtsV8s_tHSwrGn8HkpegF64k5zlJY-fEXy0Nt1iuL3xKoukSS_A",
+      "plaintext": {
+        "format": "1.0",
+        "template": "secure_note",
+        "title": "安全笔记 示例 2",
+        "fields": [],
+        "created_at": 1759536000002,
+        "updated_at": 1759536001002
+      }
+    },
+    {
+      "name": "credit_card",
+      "item_id": "0192f0c0-0000-7000-8000-000000000067",
+      "format_major": 1,
+      "wrapped_key": "AQEXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxeJOaQ6GwBw_O7fG0oAl2fLAjqjUGbLWwnkiJE15E1YPEMoBd2SbRRprRBuwihoRjE",
+      "ciphertext": "AQFnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2flVH4nbdey-FakBfj36uyMZnsmLv7F4u6l5yYyiJA3POcaHcrwD2_58Kx-rkgsbMGXyyNRYcdBnXDfPcMGzQYuwW3yfjBf2cFGMblCTYnKLzKzTJm3MC3Fa-GhIPWSZ2xXYH-J0dTQJWM9mqqQET18w0BuAuXT7phfUb0etbkfplM5jyrLqABCpsmrFzsW8LVMAk2u1F1WSXX5owOX2KsFvBo7C61X1JTQLj2T6Pu8pQC8bI0sYB2FkqIzvBjY7MlRSHZXZrIzT5JmGz5chF2OyBqnTPWbxZPg4uIzrT4Di2DrfZe9BXJXsHOoUR4CqV7S77UXiya3SDaqC2bPB_eLttAsy3_TaAyhMMK9jgHMSiNOZg51eSVF6uPNsqiM-vDEjYIC61Op5BWuN_wsGWWCRBazsMQoHpOzgsys7PPv4Gpp_zgtp7SHQm5idJy7ca7tOXBYJQoa_C2wskroR1VWEwOZLKOT9qSU9EG-B7eQ0R71frJWB4LRiBleN9v4L2p1pSHDVWp1sBZXcmSY2J-d7csFENLqDYsWsFoYsQyR3pPjRuCVxaOsOJTMiJv4fQXITf2UlmqLbiNlzQiihEUD0ITiO4xRc56jNFaCpvaG3ysVM49EJu66Vddr8IyGc3_cnaFNXjuTFHXLUQWiWYagdXJrO11Y0dID0rlN3ARaVYTleUzrMGCQEpEZNE4KkMsz4j3AjlPbPmC6jzHDPtNtoAOonyzukrtTiDrjWIsNP5-ZudPUcFy3D_Qr5Yp3oqd2z6QzkyS10jIGL1I_39oC1k7_LmgugXKqLgR_7pMgd80zvcqvCkm87EEKEeQ_hy5OIbzr3tjqgNwyO28F82JMSARj_M71rWapHGbXM46qMxYdqpKnHJO86y5pmR4zzZLT8ojHPcfAuvF5pkRnAux9MpOa9SB8XHrAXVoWsM3swcoNE0mUFNmvtsJme6d9FEo1Lo5lEZzMfz4TJL6zpLMhbRJroEOwe1ZjBgDh35_eUhoL8cIPqR2-x5annfFNiWead6oOg_0XYHgcIVrpD4r1PSBYdBb0h4H5gtH28vvl66uhSxK-ZYJh5_96cJlr-M9sTbEA3SBw",
+      "plaintext": {
+        "format": "1.0",
+        "template": "credit_card",
+        "title": "银行卡 示例 3",
+        "fields": [
+          {
+            "id": "cardholder",
+            "label": "Cardholder",
+            "kind": "text",
+            "purpose": "cc-name",
+            "value": "cardholder-value"
+          },
+          {
+            "id": "number",
+            "label": "Number",
+            "kind": "concealed",
+            "purpose": "cc-number",
+            "value": "number-value"
+          },
+          {
+            "id": "expiry",
+            "label": "Expiry",
+            "kind": "month_year",
+            "purpose": "cc-exp",
+            "value": "2030-08"
+          },
+          {
+            "id": "cvv",
+            "label": "Verification number",
+            "kind": "concealed",
+            "purpose": "cc-csc",
+            "value": "cvv-value"
+          },
+          {
+            "id": "pin",
+            "label": "PIN",
+            "kind": "pin",
+            "value": "pin-value"
+          },
+          {
+            "id": "card_type",
+            "label": "Type",
+            "kind": "text",
+            "value": "card_type-value"
+          },
+          {
+            "id": "bank",
+            "label": "Issuing bank",
+            "kind": "text",
+            "value": "bank-value"
+          },
+          {
+            "id": "phone",
+            "label": "Phone on file",
+            "kind": "phone",
+            "value": "phone-value"
+          }
+        ],
+        "created_at": 1759536000003,
+        "updated_at": 1759536001003
+      }
+    },
+    {
+      "name": "bank_account",
+      "item_id": "0192f0c0-0000-7000-8000-000000000068",
+      "format_major": 1,
+      "wrapped_key": "AQEYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBiC-74_qr-3VzJndk7ugn7ynSrX9EQg2eUTHHFq9G02IC4G9RhZ-IX18IC2j0dPxFU",
+      "ciphertext": "AQFoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGgOe3xaDIZZiZn6Yqb98P-DEZ7crjpcIChJpIUB-a9EbFsKQikjDDumphQzZYjmM0wd1uWbJfnc6B84yWbd7pv8YoEfq-j4h92jI8rx_BC-CYMHJHfVVIT7pnyqaTpFtQcb5MQ4TEVEveJCSkprpbo_WxACUMIA93iIS_V123PkuyPoYjoW9p8uc_puNBDaO4Z7BBePc09FEzTgJnm0otdEw6Df0wSpy6RegNl3CrLtxRndszWwp8nvqatdKbbAX2jk0attRpnx1Kw7TrW0Bd1XjkQWr1zPsdfJap_DPHf-oqVpNZlvF0dbgfW17QewoleLYn54MhMZ5ttGgbkMaUGFnmRXCrxejMvnXXUl4n2r1nPndLgn7980ercKBJrwMKn3vZzCGZHWiYU73HhPRnh2KhZgnlFeqafs12MomWGgl9xFPBdQEQz1u0e3AByqHRld-PAqR7Za0QgZA95_EF8jKFpAPyEh5G4TlkEQYxMvkLk0AUI4bakhe8mc_JMQgbvohXwzE0x_2Ltdt4dVn68IakfES60Y7dOm5A-JJOe2AY335XnZKys2FndwZxbW3qJheLeqLrpiXUrQ8mDX8zg3-Z3ACo4oVBqOTXMmYJww7_6QNP4fNAdEIqFf415xY_Ni_XPBFT6rFZ3ADULXiM87Tv2zH3rST8ipFg4H9Dw_L-515vz2eQ3-JMUsLuik-tt0etrLPSppDaYIsDuJwHMIEsd8spjpGscIWD2TBFf4k07u5nrWOBkDMbx_lSq5DKfAXtJWGASIoafbpSY0hYH-LF8OMXln8KH3T8t9sjEMnRBtHItpzGqDcIln5KPLfHSzHy5kKgEJqeLTPbo8x7y6ot1wlgnuK6gTUgREq3EzbFT3yRpv9R0haDsSlNrFktNL7jwcPDm8g4ifKZd1yq9v2j7hgTn_GwOIvNVG8xlIRUermsZWPqCFdfgmhRfY589QszqSbIfMsVlt1NBz8tFsP8X15wdhUY4Ai2axZ1d0CET2ENDnIvZuvbLZMPxTIwzB5IaIpAYuJOl5CDF2oXNiFip1sWTRMeBC6n97jt8a_H-y4mbmuzG_4vXmbYQlOl8K6fSCBOyvfEpva-1VostkdUdZ42P6QIYtok1fV9fgHyEu-Z1gMkGuoFiMZGEpmu5X-Oh0T-b6oAlH5ZxeyUvI1ap-1a8yMThPcDBMnmODIr8Z6nRaB6K09fZUyHUCvouBsG4z4OFkbVQ9a0yJ1pPxnoGSzDH3uDyfguOrnmFo0fDge197srL4irIjg2w-81n5usis6O2pJQQhu4uo1M-Hv0nhYOLza4AuWisyKj_yNhTVHmo1sQT0UUrGLZNNaTSJ1w",
+      "plaintext": {
+        "format": "1.0",
+        "template": "bank_account",
+        "title": "银行账户 示例 4",
+        "fields": [
+          {
+            "id": "bank",
+            "label": "开户行 / 支行",
+            "kind": "text",
+            "value": "bank-value"
+          },
+          {
+            "id": "account_number",
+            "label": "账号",
+            "kind": "concealed",
+            "value": "account_number-value"
+          },
+          {
+            "id": "account_name",
+            "label": "户名",
+            "kind": "text",
+            "purpose": "name",
+            "value": "account_name-value"
+          },
+          {
+            "id": "online_login",
+            "label": "网银登录名",
+            "kind": "text",
+            "purpose": "username",
+            "value": "online_login-value"
+          },
+          {
+            "id": "online_password",
+            "label": "登录密码",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "online_password-value"
+          },
+          {
+            "id": "payment_password",
+            "label": "支付密码",
+            "kind": "pin",
+            "value": "payment_password-value"
+          },
+          {
+            "id": "ukey_password",
+            "label": "U 盾 / 证书密码",
+            "kind": "concealed",
+            "value": "ukey_password-value"
+          },
+          {
+            "id": "phone",
+            "label": "预留手机号",
+            "kind": "phone",
+            "value": "phone-value"
+          },
+          {
+            "id": "swift",
+            "label": "SWIFT / 联行号",
+            "kind": "text",
+            "value": "swift-value"
+          }
+        ],
+        "created_at": 1759536000004,
+        "updated_at": 1759536001004
+      }
+    },
+    {
+      "name": "identity",
+      "item_id": "0192f0c0-0000-7000-8000-000000000069",
+      "format_major": 1,
+      "wrapped_key": "AQEZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkLrOuBPVn_mnqLTJE4Plxf8-YDIgG-7ln2GavepD_iOWQUOJh16A38fMhhv6sBoVI",
+      "ciphertext": "AQFpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWmMX_66J8B1BYpHaZuK8i4HW5QhnRjp-nxpIdHa2iVBGuJkhWF00lxWzYdvhGhkS_k-uO64k0m9LghA1eTEX6ql3h9FZ4cNLeS2xjS1AjizVElHPt-90NduSk95bFmVk23_TZgqvbWXfEpc9MB_camsd1OVTcjNwu9LszsvalLDo1zaMe48S5zbYQ1I243XADkcDPuvrrMkxPxUdSXcl-7lT6CTVjp_2KjqB_nDJ6QBjTDqZ1xUEsGuKEHom2jQ_DssRXtBefdUy4hDjP9XweAxqsX9iuNSKWoT1EM8aJBDEB3R8fGq7rToopxKv5ed2ztpZK15yLdVvdFPH51aLsgRASDaJNeUWu_V6CUe4apJIy8f30vcjVyzbU2eYlg4OCe2yY-2BfmhqVPmobf7yzWVooRkbHF6cNK5QYqeA3MRQM9xnxaYjlMzWxudbSENUU6BtarteJDvDfD96qpYl_k8Q2ZFXaTBfUE04CN1lFo2vpQHLnFvs-50uG_u-hDIHqKKw9V5RMk8m6AxRsMdQ1ErMrQwXAAbai7GRA3WfAn7y73ITTpCDRg0Kq9XQSz5s9LMDSEQQ1FO3O7A2pM9L4PjaSSGnp1Ey1Mbl3EM0QIjk1JcVoWeDCi2HiMu_h0O7Uf5914esgxVHj5oowCUIftNPs6Gf6OVvG3vF6ehf2WQ53cGqqpYTfdRjoLZAiK7OLokPDrpWQVOGeKc-cD1xjFuxGjBMD4ulUhp1JTapi4PdLkUmruvxRmyChTwgLb3gzmnFzJLYJD75xm5GbplkXCLwpODM-iz2mhTSjnCEqywfmrP4eLeLOcQM8j6HSY9ygr4LsUgKhTWRUHdtyVc9oqIH6TKohZodTzaOXFeFGf64iWIzLarYjciAmGZ_gj279UrnmDSGDJ5MDkqBphUlFYN8Wi0XBVCnICGq6PEvQwuWrhDeIitn--NSs6l7ebTjnBcH3Nyiwt0_9h5E7iIRJ_nErhZ7RO-j-rq6drQ-wDwVxHoyc0CtyuI4RW4RC9FeNGfRSoxXzY",
+      "plaintext": {
+        "format": "1.0",
+        "template": "identity",
+        "title": "身份 示例 5",
+        "fields": [
+          {
+            "id": "full_name",
+            "label": "Full name",
+            "kind": "text",
+            "purpose": "name",
+            "value": "full_name-value"
+          },
+          {
+            "id": "phone",
+            "label": "Phone",
+            "kind": "phone",
+            "purpose": "phone",
+            "value": "phone-value"
+          },
+          {
+            "id": "email",
+            "label": "Email",
+            "kind": "email",
+            "purpose": "email",
+            "value": "email-value"
+          },
+          {
+            "id": "address",
+            "label": "Address",
+            "kind": "address",
+            "purpose": "address",
+            "value": {
+              "country": "中国",
+              "province": "浙江省",
+              "city": "杭州市",
+              "district": "西湖区",
+              "street": "示例路 1 号",
+              "postal_code": "310000"
+            }
+          },
+          {
+            "id": "birthday",
+            "label": "Birthday",
+            "kind": "date",
+            "value": "2030-01-31"
+          },
+          {
+            "id": "company",
+            "label": "Company",
+            "kind": "text",
+            "value": "company-value"
+          }
+        ],
+        "created_at": 1759536000005,
+        "updated_at": 1759536001005
+      }
+    },
+    {
+      "name": "document",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006a",
+      "format_major": 1,
+      "wrapped_key": "AQEaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhrr3A_5kSFJU2ax42Thh1nihCoCqdXEeILXDVJvxH_anaU4X9ZCsBCjm9BRmz4zSCw",
+      "ciphertext": "AQFqampqampqampqampqampqampqampqamqE8DPdVfgw3dZjfvEhnR9g9awLSsbNqGV9UHSZgd8YznwcoYpTkWPeitnGyBsHBuN7uRNhBcgsud3U3clLLy44bPSIVcT42CwGnfl2-nueMEL7xtOT9sacyF4FpkCPgg_NBoxmkCXjEwLNOd74pjaGDy4dBgcrGM68k_hCx0n1wGMLgkmXcAvMKewSM18sFOiFJ45ojbwnaLY3t_vlb7vIrlBcc3jlYvvxgpxjY9EBLFzs8I9LefJWMyikBy5NL6EwOyJA6A5ZfqZ7axTqzh3XzfXPZtBb_QiakeZpEVK6ziGUx5lnQ6l2IZgEfVrJnY1hcH5RM9bPqTPIdEWr__Qq9Xi9OLAFMitqzFu92PklH83syLAMsbSkCh8H6QpZ2IPdI3uqdYA4Kr1eQhw2dGgmSOBlepuMuysdgcCBdJBGttgV2XqYJdxz3Cymvs6VFbqjDqbDOrn-ls3popEOd2qqchkn-As0jOKeWx_cgED_fSINkaJYE_YEDQcZH3CTA0GJj0i9wDgpluQP64AEXDwMZexdk6-jCUh0UD33dO1q_Rg-_Ar1Bq5bF4S3RbIZkdwIJ5pzrHBE8r0bdCae4ZGNSsTQIKVoUg3YI0EuTEl-NMc_vZ-50PrbFv3TUqq1RNUTsK1L0h9fpOA_8uGBtQvNF3Xa8VKta-SGQKaG6xxe2A6OrI0lckbOQ7NKWXbpf68ZEQ1Aw8QDDf3dQVcDbzzyN-50IBptt6de3AQen_G5DLdLvmcHhWsPaYZu9w8AxjyXP7BoVGQT24zjKKOm-UnF7Lmhrv_y6rz4SJSBZodx-ZXl6eCgwM2sUw5FlWpbu-8",
+      "plaintext": {
+        "format": "1.0",
+        "template": "document",
+        "title": "证件 示例 6",
+        "fields": [
+          {
+            "id": "doc_type",
+            "label": "证件类型",
+            "kind": "text",
+            "value": "doc_type-value"
+          },
+          {
+            "id": "number",
+            "label": "号码",
+            "kind": "concealed",
+            "value": "number-value"
+          },
+          {
+            "id": "full_name",
+            "label": "姓名",
+            "kind": "text",
+            "purpose": "name",
+            "value": "full_name-value"
+          },
+          {
+            "id": "issuer",
+            "label": "签发机关",
+            "kind": "text",
+            "value": "issuer-value"
+          },
+          {
+            "id": "issued_on",
+            "label": "签发日期",
+            "kind": "date",
+            "value": "2030-01-31"
+          },
+          {
+            "id": "expires_on",
+            "label": "有效期至",
+            "kind": "date",
+            "value": "2030-01-31"
+          }
+        ],
+        "created_at": 1759536000006,
+        "updated_at": 1759536001006
+      }
+    },
+    {
+      "name": "ssh_key",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006b",
+      "format_major": 1,
+      "wrapped_key": "AQEbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxuFzhNIPTr6_Txlm8yBFmuNCEEIpyH32YqRaJjIB8xPvTrW3iQaawiKN1Bxfwjop4g",
+      "ciphertext": "AQFra2tra2tra2tra2tra2tra2tra2tra2v2Xtvd6Ilun1ACeVziFtjdoc_l499x4dmB-FWyiurAKep7EkK79vfuc0ogAOQ7Wqr02c7GtBkbpWC5A60BSvLU7CMZOnP56I6vDKssuSVm2KYV1fT9j9of30-_p30vJPlbYhj1IsBBHFIq_7a1-MiMkkwr0_HYUPzqCcVEoVFVVdcsYXHUhrRG9CxlK0rsB3bgxIecvH7z5T8EwaHEw2xRb6sGetl8zMj8JeF_1kotJSkE6I00s_gnY8kQVk_WCcIV3WRL7EUC2Do2DHBXaqdB8eptxlC2QwR896hXynZt7rgmu6gCnE7p8LeqTI0jOmTiJqbWSvOR_g_BXvbBeR75DNL0DK0crqnkkCeHCH2USB_VMe8Iafi6gmvf9G9ifk7HOV8Gd-wl7IDCllbQbsQAOPaUUvuH49oSyR9dchEujb_9amdPQ2ry3OiC-zUCTrArY2vW4y8ZU0TfoNOrN8fuUF_ovM5TVfcnB9sil-wv4zGFpMy6RoK-Flpvhyvy0a2qQPGNjqhBo77qpUiWF-BTkI6c2ScU7dvtFvuTEgzTxK2DncWyOr4O35w-9pt9BmLrnOOCDKD-flzBW4mMkkj6Hm_uikvDUHV0rnksDs_19QFfWNXbTcCADXr0BtB-2wKy_hacSMdIz34pSoLx_0widUzxQLKlv_aW3OjkXjK4hM7khT683tBVNoNuqh3LfaBLX943hlLCjN5buGxHLIwBmzlSsY5HrHVWMmR1xx3ymYDkYQKLQH266UKlWDY9kIEED2f0k5EmgFVh-YNqdDbOwyWYAvm4_UXeh9qxpzga3xqyfbw8EwR0QZ_YGgL8mFd2Tdg83QhNYoUj17XX9tme8vvgEMEreqha7mS4J_CKDZ82ChsD0-tNYnJJbs9h9_8o4KNzd_39NyB2C-jjT6L2kInSLwlO-h66MD6GI4I2K3ZQxNAZ_yE",
+      "plaintext": {
+        "format": "1.0",
+        "template": "ssh_key",
+        "title": "SSH 密钥 示例 7",
+        "fields": [
+          {
+            "id": "private_key",
+            "label": "Private key",
+            "kind": "concealed",
+            "purpose": "ssh-private-key",
+            "value": "line 1\nline 2\n第三行",
+            "multiline": true
+          },
+          {
+            "id": "public_key",
+            "label": "Public key",
+            "kind": "multiline",
+            "purpose": "ssh-public-key",
+            "value": "line 1\nline 2\n第三行",
+            "multiline": true
+          },
+          {
+            "id": "fingerprint",
+            "label": "Fingerprint",
+            "kind": "text",
+            "value": "fingerprint-value"
+          },
+          {
+            "id": "key_type",
+            "label": "Key type",
+            "kind": "text",
+            "value": "key_type-value"
+          },
+          {
+            "id": "passphrase",
+            "label": "Passphrase",
+            "kind": "concealed",
+            "value": "passphrase-value"
+          }
+        ],
+        "ssh": {
+          "confirm_each_use": true
+        },
+        "created_at": 1759536000007,
+        "updated_at": 1759536001007
+      }
+    },
+    {
+      "name": "server",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006c",
+      "format_major": 1,
+      "wrapped_key": "AQEcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwOyQYtKBkqA5U0PSjUb3rO4cyPVwh_5U-FxcKPdM1X-dr8dM1HFVAUAt6GqnVJo3M",
+      "ciphertext": "AQFsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGysH6t8HK8vCRm_XAmtTehFRZPPZshKgLtE9naMf4iHp1jkoi1_tPmw1g1lIwgL3nK0lvOopHoKmvFscZpJ0TQzvbTf5rhGHjUuiHysPaJBktkDacxLqS3otxlGqFDdjy2hqqfkrihwjW8NliIhD3zjg1QfHer0P0BPqxcD_w4j9kXJKmbhIE_9tWKxddTBfH8NG-Z_xMUVgX1ITOKZooqtVv7LAyAP3v657-vk8Pw-inqD6g0lR2TpkmUB-coapVEr7m-ygp4JhknMwXsm_fUUDU8D0xIOBTJ8LjZgPIP7iTqREI_5FeYbVMPkJTahKgSV8JyDHMmI2raPdot_RXRKInpUyzXLM0bmAFkpeFpPEVd337PoPoEzxUVV_Y0MU5zeKKk5FsHemsABPz2LKkbRIqiuwA3ehUgX2KemHR1eYIWIHZNRftpT1E0yE2sWz5DooG9uV5JgfEUXCRnd2ksWfRcDu2ejcULnqg8idoAK3LQH-r8tNOh1t815VQKUi2nmVdd-WcK_qfXcnmF7_bOMg0NqumctVIUQEFkDioubUt5KcOoj37RF_VYFJjRfDs4fywcnSjhNjejHrbWee4IVBS9BzbHIXnJmWkreQCNgp1ok00GKxgSa5lUyNNf02OnFxzrGOz_nhKQOjxvKBgl4myTXAe6Atj_39Jt4yKcmEHNpnDRWS3CB5uLCiMw6remnqXlyZ_Hg8DtsGjonoqehfDobYXhhUAogijuuA9et",
+      "plaintext": {
+        "format": "1.0",
+        "template": "server",
+        "title": "服务器 示例 8",
+        "fields": [
+          {
+            "id": "host",
+            "label": "地址",
+            "kind": "text",
+            "value": "host-value"
+          },
+          {
+            "id": "port",
+            "label": "端口",
+            "kind": "number",
+            "value": "port-value"
+          },
+          {
+            "id": "username",
+            "label": "用户名",
+            "kind": "text",
+            "purpose": "username",
+            "value": "username-value"
+          },
+          {
+            "id": "password",
+            "label": "密码",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          },
+          {
+            "id": "ssh_key",
+            "label": "SSH 密钥",
+            "kind": "reference",
+            "value": "ssh_key-value"
+          }
+        ],
+        "created_at": 1759536000008,
+        "updated_at": 1759536001008
+      }
+    },
+    {
+      "name": "database",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006d",
+      "format_major": 1,
+      "wrapped_key": "AQEdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR2b_ot90q7ZE3_q0Oy8ZAWgWGUTfsKFQ8-9SMe0tl1-q_y3MIOcTnawV_ZsirzmZZE",
+      "ciphertext": "AQFtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW3jGh_3X3vPek_OqDtfiNcu9ZZEv61It8g2AGBR0jVpn1LJTtWpOrdyzONllB858SqTT3RnAxdwrUo2otjEq0-_GUcdSHpSiPfxF1B0iTjaAZ5W5hwsgU0krWW8tO8pwUUDq8LHfOe23R_qYho-5LZvo_K_Kk6PMkOaJgC9pZ8m161u2woo0DnrhH7qMnYXw14HoFCME4Q9Nse_SqLumgV1FtoDd4pfiEMQ-dnkWr6DSElsxQoYXAsMg7li7zNzb5HgH864stljOZ_TzZohGGbt64PVafgmibooigvrHqd_mmVWU5lqdtdmEL68--J4-ZEoE1I1P3c-Jwh1HbY-weMoYfAqXSLJGE_KQaRxRaKnlFJTzDd1spFHz2TDBYzrKokx1ive4FzIeEkf-CtWjKXCjcr6EEcM_0ES6uqePdQ42Rc3U5w0t7UBQS6TzAHkB8fmuGUY_s-D9S2bWRw95jy76JHist3IT-1M9n4bC7jvlj6GsP9iIVLiJNautUDwdIUOO8cq3YFisXgT9-2TU5ol9ufHdAoR9kgcs1fgpjHryoq9qJ3J348SZixa6n01omSwdrjjfLtZFgPRxFfX0FYIcUQBrCv5awhpeXPwoj4CLJWVFSTQruDnGV5Vf2pPTkKHFYHf7xWrqm4X-e7ThEz6X4GnSfENMEOsIXicjV7UBZypaJO8gZGanOTyM_zmSvaCpad86zxDDiav1iD1Sv41pfKPBVoOnz-1OUxcc02PJ78CJ9bwhrK5KCzXWW7n_KGDXitvBnQDRaBuu_3Y4zlUlQU98vUnNf7514KrV2ZG7E2pukSyXs1glCHUFetrDyBa_yEiRyT_HbogyPXS-emlo9l2PYaFoovI2R7am7R52RFdpaVcL3zqBOCEGcG4D6Yc5RxPijzuO4EQWZnASmoOQPJZQlr4j-qFlvGlZRQPZyP_rA",
+      "plaintext": {
+        "format": "1.0",
+        "template": "database",
+        "title": "数据库 示例 9",
+        "fields": [
+          {
+            "id": "db_type",
+            "label": "Type",
+            "kind": "text",
+            "value": "db_type-value"
+          },
+          {
+            "id": "host",
+            "label": "Host",
+            "kind": "text",
+            "value": "host-value"
+          },
+          {
+            "id": "port",
+            "label": "Port",
+            "kind": "number",
+            "value": "port-value"
+          },
+          {
+            "id": "database",
+            "label": "Database",
+            "kind": "text",
+            "value": "database-value"
+          },
+          {
+            "id": "username",
+            "label": "Username",
+            "kind": "text",
+            "purpose": "username",
+            "value": "username-value"
+          },
+          {
+            "id": "password",
+            "label": "Password",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          },
+          {
+            "id": "options",
+            "label": "Connection options",
+            "kind": "text",
+            "value": "options-value"
+          }
+        ],
+        "created_at": 1759536000009,
+        "updated_at": 1759536001009
+      }
+    },
+    {
+      "name": "api_credential",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006e",
+      "format_major": 1,
+      "wrapped_key": "AQEeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh6j3vIQo90-eZxp2EqKdT8825dBk-K35K9M-o5KvzYsp8LaqxTZXw2NmQjkEgYPx2o",
+      "ciphertext": "AQFubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ADV7N5TH8o7fHgZQrwkXQI6vs5LMBeh7-7eFMGQHzmlBjfOa0gQdJHg0iZ440FTVQaO1u66Maj7XaYcHf6v8WNWr5xTPL5GLXM3VV0g78XAnPekcmy3dp4P8J18m9_VvfTYO3nWbyprxEd9FpQvZeLefXwTTATtn9EvhiR2bdLF22IuvdOBYABNVLlDNbtTpfDzSlGDP6M5449pD_liEnfySVts2THkdbDBY43weE5RSjlCAqFFzFGpm2P9PR96-khInTev2DMdfqNqyLP4dMnxQ59-X0sKj19Ux8ALiBMYkjJvSWdRPYvulWgQoF7yMabYmsKE9W2AD29jnEYogDL8M2lzLbemlRJhTw-qnVzi6jq2R7WrjyV4Ur-vProx7GmeRqv22RfmlwtRhCqdVX6YhhIWmP4iciam13GL3CcOp4pmJ53wyGNBqOFTuHzz5IaBru6B1d2OqmN4RlJVyuP1DdlOTVo0RqaaXBeY7DVxXibUm-mxikgZJggoAi_ooZZIZfDXNGieQJo4RU3ChVy_kejefQRSrLA_Mjj-oaDfJ99NbHiismhzX0mgjPK2uU2n5VIkqWGmCD8_TB8dJxD1V6VtDEHQB2uzvU5TQ56nuOhPMQzBpx_ImtM48sLw8FcVKCrHv4LwLn0KCioe9R6blyaYQYgq_zfyXL7BkjaGA1wCDohcNi4OSMpCuNsprtPHHRjtRsY5Hd5VmjUF3k",
+      "plaintext": {
+        "format": "1.0",
+        "template": "api_credential",
+        "title": "API 凭据 示例 10",
+        "fields": [
+          {
+            "id": "username",
+            "label": "用户名 / Key ID",
+            "kind": "text",
+            "purpose": "username",
+            "value": "username-value"
+          },
+          {
+            "id": "credential",
+            "label": "凭据",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "line 1\nline 2\n第三行",
+            "multiline": true
+          },
+          {
+            "id": "endpoint",
+            "label": "地址",
+            "kind": "url",
+            "value": "endpoint-value"
+          },
+          {
+            "id": "expires_on",
+            "label": "过期时间",
+            "kind": "date",
+            "value": "2030-01-31"
+          }
+        ],
+        "created_at": 1759536000010,
+        "updated_at": 1759536001010
+      }
+    },
+    {
+      "name": "wifi",
+      "item_id": "0192f0c0-0000-7000-8000-00000000006f",
+      "format_major": 1,
+      "wrapped_key": "AQEfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8wYYdkSn8bM0P0fTwgSRwb3HnaY_wLzjBeAEaEl2wwWg6wg4L5G6mfzeLOLuBHE4k",
+      "ciphertext": "AQFvb29vb29vb29vb29vb29vb29vb29vb2_Eyfqv_EtH-Gw0nXKS-OfinnVIGHdloBHtive7ur7WAehcUNjs_bY4gesel7a7te4F_sgXFhxL4WafeCBQ0cbgz8x6NzG9A6GXqxeGDZGMtHB3sM7E6fDX_8-H8fEvgUnHj02G9dH-UTg0vWa07fBsiHHb8TKhuC5bouOi01r01UvOsEpIk4XlyxCQgHPfP_kG8-fH7Cqiy2sGNdysCQBotMSHiFsXv415bIxuIe3WvYfsCwAyESDTs9U3QDFTQWlrIFsGzX6bHCXrKZ3nbIfzzhpH0oWtpuH453n5kIof-oumUNdvs9ERgCfuH0NOO-Fj5-MkpSb8NPD9oVmKu4Aoyht5JnfTsIitdy6vuV6F2EqcBZJkSS-dAMIRS3tbyXRGc9sNFKzGiwJlLKD641Xd8g2iVVMqMKVGciyBQ2-jqH_etpFeV9MSIa5XOdbBrSUbjBnCfIvIAd4N_0nOggxRaBm7PJULtGMzkKDDfzXSI2KSJLcOoIs_RkbFl6BCAyZBBpoTVtmN",
+      "plaintext": {
+        "format": "1.0",
+        "template": "wifi",
+        "title": "Wi-Fi 示例 11",
+        "fields": [
+          {
+            "id": "ssid",
+            "label": "Network name",
+            "kind": "text",
+            "value": "ssid-value"
+          },
+          {
+            "id": "password",
+            "label": "Password",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          },
+          {
+            "id": "security",
+            "label": "Security",
+            "kind": "text",
+            "value": "security-value"
+          }
+        ],
+        "created_at": 1759536000011,
+        "updated_at": 1759536001011
+      }
+    },
+    {
+      "name": "software_license",
+      "item_id": "0192f0c0-0000-7000-8000-000000000070",
+      "format_major": 1,
+      "wrapped_key": "AQEgICAgICAgICAgICAgICAgICAgICAgICCB88DgGgjqw9rPAI_5WiuxtLQnSOW7xyaXaqXEJ2zGL2FfaDnlaHWqd3MyCuEVir4",
+      "ciphertext": "AQFwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHCjdvHKaBk_5-WgXbU06yPuI18vshd9zOnekgS5evBhISxb1GAL_JDkoVXZ6vT0l55JDFdGvEOmg1IAObWmhZlNgPwHFRa90a6Td0usSdbbbD1UjbhwBTjPQF1fxnuon_lESXcIFPE_SnQPEYL8DnWT-cdE9-9z3nj6r6SZbBMlXf9ftyfJdLFCFmiP_qE6OshgAR_GAEFh6iU0BxbmsASdCAyhEfDDg7oRIdNR15c0vS29AG4NWyyHoPGpeKQ0IFt-M5pQlReVBWK0uwROU9m0XnxEMMgey9HVKHqOcIEWQG5lzguOYjWrrXW5x_9eSBPxtgLk-JLn7Nl6Ze6xc3LH4p2YkEaBtbFJdyVofFjkImGwwutVxo4hlDqOs7wEvilVOrNDTunQRC3ZuAQ9ggEKrsfsKrbclRn33XncLlUATPs0qrB63JpXWYTXwvFfHis0hLMB7v18gmEGiUoVxPXuW1_f36AlZ0Dr-jV6g3JTaT_dZyEBtasdFZ0Yxx0zXBrjXH2lydi3q8--omHBZMgZk4XZeq9DZ4-bglNLfS_WWCwJUnPnASpm3yHKdddFVHBEy-dxQD26hsP2ycyOuuNjJSpse8KaLZ_XpjBS5jM7BQnpv8szurshtBc7CwFf2rnvGD-BE8tux0wKY8DjEcG9cBgGIQz1njwF_SDyK6ILNw44wiLnHenVSOV220Vzdr_8Vn4y7dQ7-H3IpEtfQYjPSA8EajnX_VqQU_3INntUEFS5UuYb8SuMUrEOmhl0MyaOT8MMi2xviCMx7jHM1lfyPiwGrOKKYMEuKuEhTMDJORC8sNrBEzR77D6rmMbu5pdae5vmIWcn5DVLyX65tKzhuO8tZQOyp4yYtHQnIoOuB5tXGBdNaoAHcWtYkBXFzyj5SQ",
+      "plaintext": {
+        "format": "1.0",
+        "template": "software_license",
+        "title": "软件许可 示例 12",
+        "fields": [
+          {
+            "id": "version",
+            "label": "版本",
+            "kind": "text",
+            "value": "version-value"
+          },
+          {
+            "id": "license_key",
+            "label": "许可证密钥",
+            "kind": "concealed",
+            "value": "line 1\nline 2\n第三行",
+            "multiline": true
+          },
+          {
+            "id": "licensed_to",
+            "label": "授权给",
+            "kind": "text",
+            "value": "licensed_to-value"
+          },
+          {
+            "id": "email",
+            "label": "注册邮箱",
+            "kind": "email",
+            "value": "email-value"
+          },
+          {
+            "id": "order_number",
+            "label": "订单号",
+            "kind": "text",
+            "value": "order_number-value"
+          },
+          {
+            "id": "purchased_on",
+            "label": "购买日期",
+            "kind": "date",
+            "value": "2030-01-31"
+          }
+        ],
+        "created_at": 1759536000012,
+        "updated_at": 1759536001012
+      }
+    },
+    {
+      "name": "crypto_wallet",
+      "item_id": "0192f0c0-0000-7000-8000-000000000071",
+      "format_major": 1,
+      "wrapped_key": "AQEhISEhISEhISEhISEhISEhISEhISEhISFRGYV88naBN5Fvdrnnfc9TRlewnwiYJzUo9PO9TOQvwozv_zlOaY-Lj-glCuRUbMw",
+      "ciphertext": "AQFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXHGJLihwNlZepKP0de1NYChqm0H4ua5r991TA5LPTkYKWfpVJA5ctQuSzpIpBqtkw5Cywp_8jq-t0Kp_X1Hbwlol_qERlA5TNhhouUNDqY9EJrmhUFuxl93Y238IqoPt3MKMjYf7GxarvwpW9_Usz2DPHA-hGgoxt7gnqFzL0rLNrUi8Ux8c2PRKmWMVbYg1nXKYj7agvcy2LBNMeIQwJ12dYpgz97jYdGgMSnsDh-rzWlS_gwUkE2IHs5Idd1Vw7tv6K8_B0uJa-iCcfsL5kLBfxJ2949AACDVs-Cjkgh-MX_ua-4QewRVnA1PUopZLfl0WjOA0QaaDWQJUBUNM0wFOYUZYcAxDhyf0R-ugkqTitDsngXEWqqcLRy8c7htUopLMTfmf0zJxNl3ZUXClas51ObYnwdBSFsGQ4HAYSSAD-2_EHga_azfgbGRDFisD3N0e_A-zs1r3Azg1LR7QRVS00iRSD4GPIc0GHQPp4j24ie578kvkGsezVLl9JIQ1D1B2IB5Qjdx0anxW25nDUbpSq3KotJcMZ05dOt3QnHUlMFPREFGN3k84RBHlo23HRmCsWQs-vTNc_rIcHhQUPbvmG6To5BnT3TEJvCEvtE",
+      "plaintext": {
+        "format": "1.0",
+        "template": "crypto_wallet",
+        "title": "加密钱包 示例 13",
+        "fields": [
+          {
+            "id": "recovery_phrase",
+            "label": "Recovery phrase",
+            "kind": "concealed",
+            "value": "line 1\nline 2\n第三行",
+            "multiline": true
+          },
+          {
+            "id": "password",
+            "label": "Wallet password",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "password-value"
+          },
+          {
+            "id": "address",
+            "label": "Address",
+            "kind": "text",
+            "value": "address-value"
+          }
+        ],
+        "created_at": 1759536000013,
+        "updated_at": 1759536001013
+      }
+    },
+    {
+      "name": "login_full",
+      "item_id": "0192f0c0-0000-7000-8000-000000000072",
+      "format_major": 1,
+      "wrapped_key": "AQEiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiJiLIPciIKUm4nu0rpbZ8Po-4MBIWkGkbQN0YXxb4fvQYP2pGJs57WxlNSjDYkFwZk",
+      "ciphertext": "AQFycnJycnJycnJycnJycnJycnJycnJycnLAN7tDoov2UxV01ZQ__S9Ksn55DQxT7oBG9lXCcvUaKzIxHakE15MR-1TyC0JvFjaEbSs5uKu983IxsnbJqckpjDPdXxNCJMvhMrI9-vblrmkpdrSgAaepzB-akWT4KH87_sIUzCG5iwI_zBAK1HKLQif3H9rMTe9HH1IXv8Em9edVPkfFGffkPoVfM26fzq391FZ5jjTHqrn1SnVPElCFfwnCc4KLGu34coGFOnzW4BPq_LiSLazg76bsoWTdZj5BDxvpnzwFBpU0yXHtDWCZKaubYFBM_couBCbYsG2KsSzbzR5NBE-GSvO1q8RNrzVAd2NItuwEyKpyp8Nbb65b9orPvL2PvVkgdx8Shg4JNWjDvalGOUbLUhd72NsufdP4VR2_9kM6g3AouPt8w0rFeIyJCx0uITKzwkAROl2V648wNePIVCHMdehVJIMPtmFLdOxgHvQtuXeuS7q4RWsc5vNR0LhTsyka_l3uec9h5bUfuum6UyCa8SqlmHErh24eYosKzDrNAEt5VRrtADAJQuvWS2jOy95m79VIuljbZDgD5zhCwlBrimZ8qOl8yvxY4IwOzzEsgMPXUyJHQdNWJewgOqGLUG2CHqf4stSDuhRXvH7SRjzDayfFZJPyxXR7o80RDFaBBavT3ku5nUUztUg4KmNXUL8_yNmE8oosbrT9STaegmUO9VOzOLGik9CM8KZlCY34q3e5FARK3bhpoLDgfkQb6R-syOD8JQHwdc-xRdIVhnmoWM3O2AeOXQS3L2SV-xZ2E-J7TYs10Mo5-YcMd0vpqkZXTBNGEujs2IUKkqtGxDq6aX7NBtiubsQyyZfMs1Qp7I_h1IfmYb4UAAT6Oc6vFV1Me09qSMUmZ9HyJTLPClT5RfpAi839A-TDA4lXsTXhflcq6GLS_6_OxxX6xnpa9KwIxVuLxLEwAAqjRlcsgwNBkNthg0GLi2UbrUCWAxtbdBV-Fi1jvCAcxOm4kmOGd4IeWFnBVnS6nw2X1_Zn5ZU5F3FjP7xKb7_0Cffy072FMinkpc-su0BNY92n82_icffH3tdLerv0Q8c5rXk4IZYo6zDzBL_qkC2ACNRgndzLuwwEOVRX6SvNaDFeLgJNdQTqY5VcCeynBs0mWSBv0R8L1iD1qHzTiPyr57hhO1VyH-_AILNFr6--iLuTc-0SKPx5rXbTvj-ev74CCWekF5O2IMayD8QYzDHy0bxfDNAshYR4WwVDdER0tK21MarTL4q7PG7QcZSjLpPHiY5BZULC8pJ8A_LwleuYh4MfRKOSHmRAEe28343HnAZ8VgzT5q2WL2qVPJ9i41iPSWmx68H2nZU9S2DpR4yoKZu0Yn1E5j2nrBU-8QyTCcKZCEF1zztL2druYjIni8Gz0Ev_I6lOa2pn06kDxwSmcq_8FVONRfnWxhA7huVNCdCwGafmaUjrMXsnTXv0R4fqTBxDotVo54NehaGbSlReIi3MNU5bfx8Eyxk99MBQ_Q1x3NIvAbh7u_ujPL6qgY87XzpoaEM2iT7miLlzZaR_Dq_M74XvaKghx9rB3XvCeYbv3TuJEObFUEy5aabeTkUsoCAiD4VwsJBjuDoPV4gGo4nb8IjufxZPiCZf4Volpj12ymgcHTndO_ucIm0AfnU8fQfkM6kFWeKugvB0KJ4uu57wKS3Y-tYXCFCiW6CW4TKLq4MvmrVUao1QjL_Z_gPOd0ecugFslpXc0sKLOiTIbyQBSJYtbzFmRKy9tY42RnVRXosv6jNpbZEGpI7ORHx-NdW3mvYTeBWdMwdvSkRfNaehGOzuIikOCK8-g8RG1Aul4OqSHnacFmMJwWOnxaRToDT8PAjEkjzkptTm9ixFm368Po-AmaunVRDAtymjoBYbYU33Vxa9nWD9nK__abb-C7rFjO01OrnTQvHqw5nIIvagc7YE9unrNOickXHY-vg43-D7ZfPB8b0FcCRg8TqnuOsLvORUuLJ0xf3rHCFbXNtLv105uOzklmcJ1nr78SK0gB8BzMXhffuiKpJpbgts1-gQXMgr_gjQMC6un8moklHQvhJXY7HGDoGpK3cOdhJwJYDmCCnbgRusNLS6lL_vDC1RmlqZaVRqpnhz29s0S_jiaRutkiYRU9A6yttYXt34jpV2zAEeIznmF4YNpt3VB-iK8ZtjOJhfFZedzjaD-UKBE_jmbS6uMwzH6wB-ojTPYKYEppVBqK4hnWiM_Nq8Mdkq1d1id8C_S3rY7VVxdlKlUwLbHW1i28G_JUMdqhO4nhrSrEWsX_saj79YG83Ug6PUz8BTx-f67g6Ul_XEyhhjScU",
+      "plaintext": {
+        "format": "1.0",
+        "template": "login",
+        "title": "Full",
+        "favorite": true,
+        "archived": true,
+        "tags": [
+          "工作/开发",
+          "a"
+        ],
+        "fields": [
+          {
+            "id": "username",
+            "label": "用户名",
+            "kind": "text",
+            "purpose": "username",
+            "value": "octocat"
+          },
+          {
+            "id": "password",
+            "label": "密码",
+            "kind": "concealed",
+            "purpose": "password",
+            "value": "pässwörd"
+          },
+          {
+            "id": "otp",
+            "label": "一次性密码",
+            "kind": "totp",
+            "purpose": "otp",
+            "value": ""
+          },
+          {
+            "id": "f_rc",
+            "label": "恢复码",
+            "kind": "concealed",
+            "value": "aaaa-bbbb\ncccc-dddd",
+            "section": "s_rec",
+            "multiline": true
+          }
+        ],
+        "sections": [
+          {
+            "id": "s_rec",
+            "label": "恢复"
+          }
+        ],
+        "urls": [
+          {
+            "id": "u1",
+            "url": "https://github.com/login",
+            "match": "domain"
+          },
+          {
+            "id": "u2",
+            "url": "androidapp://com.github.android",
+            "match": "exact",
+            "cert_sha256": [
+              "abababababababababababababababababababababababababababababababab"
+            ]
+          }
+        ],
+        "passkeys": [
+          {
+            "id": "pk1",
+            "rp_id": "github.com",
+            "credential_id": "Y3JlZA",
+            "user_handle": "dXNlcg",
+            "user_name": "octocat",
+            "user_display_name": "Octo Cat",
+            "rp_name": "GitHub",
+            "alg": -7,
+            "private_key": "cGtjczg",
+            "counter": 0,
+            "discoverable": true,
+            "created_at": 1759536000000
+          }
+        ],
+        "notes": "多行\n备注",
+        "attachments": [
+          {
+            "id": "a1",
+            "name": "扫描件.pdf",
+            "size": 12345,
+            "mime": "application/pdf",
+            "key": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk",
+            "blob_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "created_at": 1759536000000
+          }
+        ],
+        "history": [
+          {
+            "id": "h1",
+            "field": "password",
+            "label": "密码",
+            "value": "old",
+            "until": 1759536000100
+          }
+        ],
+        "autofill": {
+          "auto_submit": true
+        },
+        "conflicts": [
+          {
+            "id": "c1",
+            "path": "fields/password/value",
+            "label": "密码",
+            "value": "theirs",
+            "kept": "pässwörd",
+            "device": "dev",
+            "at": 1759536000200
+          }
+        ],
+        "created_at": 1759536000000,
+        "updated_at": 1759536000500,
+        "import": {
+          "batch": "b",
+          "source": "bitwarden",
+          "at": 1
+        },
+        "x_future_key": {
+          "kept": [
+            1,
+            2,
+            3
+          ]
+        }
+      }
+    }
+  ]
+}

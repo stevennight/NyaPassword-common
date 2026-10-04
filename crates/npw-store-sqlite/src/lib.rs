@@ -44,17 +44,22 @@ impl SqliteStore {
         conn.pragma_update(None, "synchronous", "FULL").map_err(e)?;
         conn.pragma_update(None, "foreign_keys", "ON").map_err(e)?;
         conn.execute_batch(SCHEMA).map_err(e)?;
-        let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).map_err(e)?;
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .map_err(e)?;
         if version == 0 {
             conn.pragma_update(None, "user_version", 1).map_err(e)?;
         }
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// `PRAGMA integrity_check` result ("ok" when healthy).
     pub fn integrity_check(&self) -> Result<String> {
         let c = self.conn.lock().expect("db lock");
-        c.query_row("PRAGMA integrity_check", [], |r| r.get(0)).map_err(e)
+        c.query_row("PRAGMA integrity_check", [], |r| r.get(0))
+            .map_err(e)
     }
 }
 
@@ -65,13 +70,19 @@ fn parse(data: String) -> Result<LocalItem> {
 impl Store for SqliteStore {
     fn get_meta(&self, key: &str) -> Result<Option<Vec<u8>>> {
         let c = self.conn.lock().expect("db lock");
-        c.query_row("SELECT v FROM meta WHERE k = ?1", [key], |r| r.get(0)).optional().map_err(e)
+        c.query_row("SELECT v FROM meta WHERE k = ?1", [key], |r| r.get(0))
+            .optional()
+            .map_err(e)
     }
 
     fn get_item(&self, vault_id: &str, item_id: &str) -> Result<Option<LocalItem>> {
         let c = self.conn.lock().expect("db lock");
         let data: Option<String> = c
-            .query_row("SELECT data FROM items WHERE vault_id = ?1 AND item_id = ?2", [vault_id, item_id], |r| r.get(0))
+            .query_row(
+                "SELECT data FROM items WHERE vault_id = ?1 AND item_id = ?2",
+                [vault_id, item_id],
+                |r| r.get(0),
+            )
             .optional()
             .map_err(e)?;
         data.map(parse).transpose()
@@ -79,8 +90,12 @@ impl Store for SqliteStore {
 
     fn list_items(&self, vault_id: &str) -> Result<Vec<LocalItem>> {
         let c = self.conn.lock().expect("db lock");
-        let mut st = c.prepare_cached("SELECT data FROM items WHERE vault_id = ?1").map_err(e)?;
-        let rows = st.query_map([vault_id], |r| r.get::<_, String>(0)).map_err(e)?;
+        let mut st = c
+            .prepare_cached("SELECT data FROM items WHERE vault_id = ?1")
+            .map_err(e)?;
+        let rows = st
+            .query_map([vault_id], |r| r.get::<_, String>(0))
+            .map_err(e)?;
         rows.map(|r| r.map_err(e).and_then(parse)).collect()
     }
 
@@ -93,7 +108,9 @@ impl Store for SqliteStore {
 
     fn get_blob(&self, key: &str) -> Result<Option<Vec<u8>>> {
         let c = self.conn.lock().expect("db lock");
-        c.query_row("SELECT v FROM blobs WHERE k = ?1", [key], |r| r.get(0)).optional().map_err(e)
+        c.query_row("SELECT v FROM blobs WHERE k = ?1", [key], |r| r.get(0))
+            .optional()
+            .map_err(e)
     }
 
     fn apply(&self, ops: Vec<StoreOp>) -> Result<()> {
@@ -105,7 +122,8 @@ impl Store for SqliteStore {
                     tx.execute("INSERT INTO meta (k, v) VALUES (?1, ?2) ON CONFLICT(k) DO UPDATE SET v = excluded.v", params![k, v]).map_err(e)?;
                 }
                 StoreOp::DeleteMeta(k) => {
-                    tx.execute("DELETE FROM meta WHERE k = ?1", [k]).map_err(e)?;
+                    tx.execute("DELETE FROM meta WHERE k = ?1", [k])
+                        .map_err(e)?;
                 }
                 StoreOp::PutItem(it) => {
                     let data = serde_json::to_string(&it).map_err(e)?;
@@ -116,16 +134,22 @@ impl Store for SqliteStore {
                     .map_err(e)?;
                 }
                 StoreOp::DeleteItem { vault_id, item_id } => {
-                    tx.execute("DELETE FROM items WHERE vault_id = ?1 AND item_id = ?2", [vault_id, item_id]).map_err(e)?;
+                    tx.execute(
+                        "DELETE FROM items WHERE vault_id = ?1 AND item_id = ?2",
+                        [vault_id, item_id],
+                    )
+                    .map_err(e)?;
                 }
                 StoreOp::PutBlob(k, v) => {
                     tx.execute("INSERT INTO blobs (k, v) VALUES (?1, ?2) ON CONFLICT(k) DO UPDATE SET v = excluded.v", params![k, v]).map_err(e)?;
                 }
                 StoreOp::DeleteBlob(k) => {
-                    tx.execute("DELETE FROM blobs WHERE k = ?1", [k]).map_err(e)?;
+                    tx.execute("DELETE FROM blobs WHERE k = ?1", [k])
+                        .map_err(e)?;
                 }
                 StoreOp::ClearVault(v) => {
-                    tx.execute("DELETE FROM items WHERE vault_id = ?1", [v]).map_err(e)?;
+                    tx.execute("DELETE FROM items WHERE vault_id = ?1", [v])
+                        .map_err(e)?;
                 }
             }
         }
@@ -155,8 +179,13 @@ mod tests {
                 created_at: 1,
                 rejected: None,
             }),
+            seen: vec![],
         };
-        s.apply(vec![StoreOp::PutMeta("a".into(), vec![1, 2]), StoreOp::PutItem(it.clone())]).unwrap();
+        s.apply(vec![
+            StoreOp::PutMeta("a".into(), vec![1, 2]),
+            StoreOp::PutItem(it.clone()),
+        ])
+        .unwrap();
         assert_eq!(s.get_meta("a").unwrap(), Some(vec![1, 2]));
         assert_eq!(s.get_item("v", "i").unwrap(), Some(it.clone()));
         assert_eq!(s.list_items("v").unwrap().len(), 1);

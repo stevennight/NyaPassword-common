@@ -4,7 +4,7 @@
 //! - [`Client`]: registration, login, unlock / lock, the decrypted item cache,
 //!   item edits (always local first, then synced), sync, attachments, history.
 //! - [`store`]: the local replica (ciphertext only).
-//! - [`transport`]: HTTP.
+//! - [`transport`](crate::transport): HTTP.
 //! - [`search`], [`generator`], [`security`]: search with pinyin, password
 //!   generator, security report.
 
@@ -18,15 +18,19 @@ pub mod search;
 pub mod security;
 pub mod store;
 mod sync;
+pub mod transfer;
 pub mod transport;
 
-pub use client::{AccountSummary, Client, ClientConfig, EmergencyKit, ItemView, LockState, VaultView};
+pub use client::{
+    AccountSummary, Client, ClientConfig, EmergencyKit, ItemView, LockState, VaultView,
+};
 pub use health::HealthReport;
 pub use items::ItemFilter;
 pub use remote::{ImportResult, IMPORT_KEY};
 pub use security::{Finding, Issue, SecurityReport};
 pub use store::{LocalItem, MemoryStore, PendingEdit, Store, StoreOp};
 pub use sync::SyncReport;
+pub use transfer::{ImportCommitReport, ImportPreview};
 pub use transport::{HttpRequest, HttpResponse, Transport};
 
 pub use npw_crypto::{Key32, SecretKey};
@@ -47,7 +51,11 @@ pub enum CoreError {
     #[error("network error: {0}")]
     Network(String),
     #[error("server error {status} {code}: {message}")]
-    Api { status: u16, code: String, message: String },
+    Api {
+        status: u16,
+        code: String,
+        message: String,
+    },
     #[error("cryptography error: {0}")]
     Crypto(#[from] npw_crypto::CryptoError),
     #[error("local storage error: {0}")]

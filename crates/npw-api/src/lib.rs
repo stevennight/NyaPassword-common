@@ -280,6 +280,10 @@ pub struct ChangesResp {
     pub next_seq: i64,
     pub has_more: bool,
     pub vault_seq: i64,
+    /// Items permanently deleted (emptied from the trash) after `since`. Clients
+    /// drop them instead of treating their absence as server data loss.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purged: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -377,6 +381,9 @@ pub struct RevisionInfo {
     pub created_at: i64,
     pub device_id: String,
     pub size: i64,
+    /// The revision's item hash (lets clients tell ancestors from diverged histories).
+    #[serde(default)]
+    pub hash: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -449,12 +456,21 @@ mod tests {
         let a = vault_digest([("b", 2, false, "h2"), ("a", 1, true, "h1")]);
         let b = vault_digest([("a", 1, true, "h1"), ("b", 2, false, "h2")]);
         assert_eq!(a, b);
-        assert_ne!(a, vault_digest([("a", 1, false, "h1"), ("b", 2, false, "h2")]));
+        assert_ne!(
+            a,
+            vault_digest([("a", 1, false, "h1"), ("b", 2, false, "h2")])
+        );
     }
 
     #[test]
     fn event_json() {
-        let e = Event::VaultChanged { vault_id: "v".into(), seq: 3 };
-        assert_eq!(serde_json::to_string(&e).unwrap(), r#"{"kind":"vault_changed","vault_id":"v","seq":3}"#);
+        let e = Event::VaultChanged {
+            vault_id: "v".into(),
+            seq: 3,
+        };
+        assert_eq!(
+            serde_json::to_string(&e).unwrap(),
+            r#"{"kind":"vault_changed","vault_id":"v","seq":3}"#
+        );
     }
 }

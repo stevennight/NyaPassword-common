@@ -41,14 +41,25 @@ pub enum KdfAlg {
 impl Default for KdfParams {
     /// 64 MiB, 3 passes, 4 lanes.
     fn default() -> Self {
-        Self { alg: KdfAlg::Argon2id, m: 64 * 1024, t: 3, p: 4 }
+        Self {
+            alg: KdfAlg::Argon2id,
+            m: 64 * 1024,
+            t: 3,
+            p: 4,
+        }
     }
 }
 
 impl KdfParams {
     /// Refuses parameters a malicious server could use to weaken the derivation.
     pub fn validate(&self) -> Result<()> {
-        if self.m < 16 * 1024 || self.m > 1024 * 1024 || self.t < 1 || self.t > 64 || self.p < 1 || self.p > 16 {
+        if self.m < 16 * 1024
+            || self.m > 1024 * 1024
+            || self.t < 1
+            || self.t > 64
+            || self.p < 1
+            || self.p > 16
+        {
             return Err(CryptoError::InvalidKdfParams);
         }
         Ok(())
@@ -56,7 +67,12 @@ impl KdfParams {
 
     /// Small parameters for tests only (never accepted by `validate`).
     pub fn insecure_for_tests() -> Self {
-        Self { alg: KdfAlg::Argon2id, m: 64, t: 1, p: 1 }
+        Self {
+            alg: KdfAlg::Argon2id,
+            m: 64,
+            t: 1,
+            p: 1,
+        }
     }
 }
 
@@ -75,7 +91,12 @@ pub fn normalize_password(password: &str) -> String {
 /// Derives the master keys. Does not check `params` against the minimums: callers
 /// that got the parameters from a server must call [`KdfParams::validate`] first
 /// (npw-core always does, unless a test configuration turns it off).
-pub fn derive_master(password: &str, secret_key: &SecretKey, account_salt: &[u8], params: &KdfParams) -> Result<MasterKeys> {
+pub fn derive_master(
+    password: &str,
+    secret_key: &SecretKey,
+    account_salt: &[u8],
+    params: &KdfParams,
+) -> Result<MasterKeys> {
     if account_salt.len() < 16 {
         return Err(CryptoError::InvalidKdfParams);
     }
@@ -83,10 +104,13 @@ pub fn derive_master(password: &str, secret_key: &SecretKey, account_salt: &[u8]
     let argon = Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        Params::new(params.m, params.t, params.p, Some(32)).map_err(|_| CryptoError::InvalidKdfParams)?,
+        Params::new(params.m, params.t, params.p, Some(32))
+            .map_err(|_| CryptoError::InvalidKdfParams)?,
     );
     let mut k_pw = [0u8; 32];
-    argon.hash_password_into(&pw, account_salt, &mut k_pw).map_err(|_| CryptoError::InvalidKdfParams)?;
+    argon
+        .hash_password_into(&pw, account_salt, &mut k_pw)
+        .map_err(|_| CryptoError::InvalidKdfParams)?;
     pw.zeroize();
 
     let mut k_sk = [0u8; 32];
@@ -105,9 +129,13 @@ pub fn derive_master(password: &str, secret_key: &SecretKey, account_salt: &[u8]
     let mut auk = [0u8; 32];
     let mut login = [0u8; 32];
     hk.expand(b"npw/auk/v1", &mut auk).expect("valid length");
-    hk.expand(b"npw/opaque/v1", &mut login).expect("valid length");
+    hk.expand(b"npw/opaque/v1", &mut login)
+        .expect("valid length");
     m.zeroize();
-    Ok(MasterKeys { auk: Key32::from_bytes(auk), login: Key32::from_bytes(login) })
+    Ok(MasterKeys {
+        auk: Key32::from_bytes(auk),
+        login: Key32::from_bytes(login),
+    })
 }
 
 /// Key for a recovery code (256 random bits, so plain HKDF suffices).
@@ -115,9 +143,14 @@ pub fn derive_recovery(code: &[u8; 32], account_salt: &[u8]) -> MasterKeys {
     let hk = Hkdf::<Sha256>::new(Some(account_salt), code);
     let mut auk = [0u8; 32];
     let mut login = [0u8; 32];
-    hk.expand(b"npw/recovery-auk/v1", &mut auk).expect("valid length");
-    hk.expand(b"npw/recovery-opaque/v1", &mut login).expect("valid length");
-    MasterKeys { auk: Key32::from_bytes(auk), login: Key32::from_bytes(login) }
+    hk.expand(b"npw/recovery-auk/v1", &mut auk)
+        .expect("valid length");
+    hk.expand(b"npw/recovery-opaque/v1", &mut login)
+        .expect("valid length");
+    MasterKeys {
+        auk: Key32::from_bytes(auk),
+        login: Key32::from_bytes(login),
+    }
 }
 
 #[cfg(test)]
@@ -153,7 +186,14 @@ mod tests {
     #[test]
     fn rejects_weak_params() {
         let sk = SecretKey::from_raw([7u8; 16]);
-        assert!(KdfParams { alg: KdfAlg::Argon2id, m: 16 * 1024, t: 0, p: 1 }.validate().is_err());
+        assert!(KdfParams {
+            alg: KdfAlg::Argon2id,
+            m: 16 * 1024,
+            t: 0,
+            p: 1
+        }
+        .validate()
+        .is_err());
         assert!(KdfParams::insecure_for_tests().validate().is_err());
         assert!(KdfParams::default().validate().is_ok());
         assert!(derive_master("x", &sk, &[0u8; 8], &KdfParams::insecure_for_tests()).is_err());

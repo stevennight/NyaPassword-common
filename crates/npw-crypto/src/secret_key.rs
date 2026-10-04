@@ -37,7 +37,10 @@ fn decode_char(c: char) -> Option<u8> {
         'I' | 'L' => '1',
         c => c,
     };
-    ALPHABET.iter().position(|&a| a as char == c).map(|p| p as u8)
+    ALPHABET
+        .iter()
+        .position(|&a| a as char == c)
+        .map(|p| p as u8)
 }
 
 impl SecretKey {
@@ -78,16 +81,22 @@ impl SecretKey {
     }
 
     pub fn parse(text: &str) -> Result<Self> {
-        let cleaned: String = text.chars().filter(|c| !c.is_whitespace() && *c != '-').collect();
+        let cleaned: String = text
+            .chars()
+            .filter(|c| !c.is_whitespace() && *c != '-')
+            .collect();
         let upper = cleaned.to_ascii_uppercase();
-        let rest = upper.strip_prefix(PREFIX).ok_or(CryptoError::InvalidSecretKey("must start with A1"))?;
+        let rest = upper
+            .strip_prefix(PREFIX)
+            .ok_or(CryptoError::InvalidSecretKey("must start with A1"))?;
         let chars: Vec<char> = rest.chars().collect();
         if chars.len() != 27 {
             return Err(CryptoError::InvalidSecretKey("wrong length"));
         }
         let mut value: u128 = 0;
         for (i, c) in chars[..26].iter().enumerate() {
-            let d = decode_char(*c).ok_or(CryptoError::InvalidSecretKey("invalid character"))? as u128;
+            let d =
+                decode_char(*c).ok_or(CryptoError::InvalidSecretKey("invalid character"))? as u128;
             if i == 25 {
                 if d & 0b11 != 0 {
                     return Err(CryptoError::InvalidSecretKey("invalid last character"));
@@ -98,9 +107,12 @@ impl SecretKey {
             }
         }
         let raw = value.to_be_bytes();
-        let check = decode_char(chars[26]).ok_or(CryptoError::InvalidSecretKey("invalid check character"))?;
+        let check = decode_char(chars[26])
+            .ok_or(CryptoError::InvalidSecretKey("invalid check character"))?;
         if ALPHABET[check as usize] != check_char(&raw) {
-            return Err(CryptoError::InvalidSecretKey("check character does not match (typo?)"));
+            return Err(CryptoError::InvalidSecretKey(
+                "check character does not match (typo?)",
+            ));
         }
         Ok(Self(raw))
     }
@@ -117,7 +129,10 @@ mod tests {
             let t = k.to_text();
             assert_eq!(t.len(), 35, "{t}"); // A1- + 6 + 4×5 + check + 5 dashes
             assert_eq!(SecretKey::parse(&t).unwrap(), k);
-            assert_eq!(SecretKey::parse(&t.to_lowercase().replace('-', " ")).unwrap(), k);
+            assert_eq!(
+                SecretKey::parse(&t.to_lowercase().replace('-', " ")).unwrap(),
+                k
+            );
         }
         for raw in [[0u8; 16], [0xff; 16]] {
             let k = SecretKey::from_raw(raw);

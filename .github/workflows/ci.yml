@@ -1,0 +1,120 @@
+name: CI
+
+# common is not released on its own: product releases pin the commit they
+# build with (COMMON_REF in those repositories).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Crates (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: common
+          persist-credentials: false
+
+      - name: Set up Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt --no-self-update && rustup default stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: common -> ../target
+
+      - name: Format
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: common
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: common
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test (incl. frozen format vectors)
+        working-directory: common
+        run: cargo test --workspace --locked
+
+  wasm-android:
+    name: WASM and Android targets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: common
+          persist-credentials: false
+
+      - name: Set up Rust
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
+          rustup target add wasm32-unknown-unknown aarch64-linux-android
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: common -> ../target
+
+      - name: Check for wasm32 (browser extension, web vault)
+        working-directory: common
+        run: cargo check --locked --target wasm32-unknown-unknown -p npw-core -p npw-import -p npw-export -p npw-passkey -p npw-ssh -p npw-wasm
+
+      - name: Check for Android
+        working-directory: common
+        run: cargo check --locked --target aarch64-linux-android -p npw-core -p npw-store-sqlite -p npw-ffi
+
+  web:
+    name: Web UI (type check, tests, build)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Set up Rust and wasm-bindgen (the web UI embeds the core as WebAssembly)
+        working-directory: .
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
+          rustup target add wasm32-unknown-unknown
+          v="$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p')"
+          cargo install wasm-bindgen-cli --version "$v" --locked
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run wasm
+      - run: npm run check
+      - run: npm test
+      - run: npx vite build

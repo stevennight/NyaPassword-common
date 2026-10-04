@@ -100,12 +100,20 @@ impl OtpSpec {
             account: String::new(),
         };
         if let Some(secret) = s.strip_prefix("steam://") {
-            let mut spec = blank(Kind::Steam, base32_decode(secret).ok_or(OtpError::Invalid)?, 5);
+            let mut spec = blank(
+                Kind::Steam,
+                base32_decode(secret).ok_or(OtpError::Invalid)?,
+                5,
+            );
             spec.issuer = "Steam".into();
             return Ok(spec);
         }
         if !s.to_ascii_lowercase().starts_with("otpauth://") {
-            return Ok(blank(Kind::Totp, base32_decode(s).ok_or(OtpError::Invalid)?, 6));
+            return Ok(blank(
+                Kind::Totp,
+                base32_decode(s).ok_or(OtpError::Invalid)?,
+                6,
+            ));
         }
         let u = url::Url::parse(s).map_err(|_| OtpError::Invalid)?;
         let mut kind = match u.host_str().map(str::to_ascii_lowercase).as_deref() {
@@ -149,7 +157,16 @@ impl OtpSpec {
         if !(1..=10).contains(&digits) || period == 0 {
             return Err(OtpError::Invalid);
         }
-        Ok(Self { kind, secret: secret.ok_or(OtpError::Invalid)?, algorithm, digits, period, counter, issuer, account })
+        Ok(Self {
+            kind,
+            secret: secret.ok_or(OtpError::Invalid)?,
+            algorithm,
+            digits,
+            period,
+            counter,
+            issuer,
+            account,
+        })
     }
 
     /// The code at `unix_secs` (TOTP / Steam) or for the stored counter (HOTP).
@@ -179,8 +196,16 @@ impl OtpSpec {
     }
 
     pub fn to_uri(&self) -> String {
-        let kind = if self.kind == Kind::Hotp { "hotp" } else { "totp" };
-        let label = if self.issuer.is_empty() { self.account.clone() } else { format!("{}:{}", self.issuer, self.account) };
+        let kind = if self.kind == Kind::Hotp {
+            "hotp"
+        } else {
+            "totp"
+        };
+        let label = if self.issuer.is_empty() {
+            self.account.clone()
+        } else {
+            format!("{}:{}", self.issuer, self.account)
+        };
         let alg = match self.algorithm {
             Algorithm::Sha1 => "SHA1",
             Algorithm::Sha256 => "SHA256",
@@ -264,15 +289,36 @@ mod tests {
     use super::*;
 
     fn spec(alg: Algorithm, secret: &[u8], kind: Kind, digits: u32, counter: u64) -> OtpSpec {
-        OtpSpec { kind, secret: secret.to_vec(), algorithm: alg, digits, period: 30, counter, issuer: String::new(), account: String::new() }
+        OtpSpec {
+            kind,
+            secret: secret.to_vec(),
+            algorithm: alg,
+            digits,
+            period: 30,
+            counter,
+            issuer: String::new(),
+            account: String::new(),
+        }
     }
 
     // RFC 6238 appendix B.
     #[test]
     fn rfc6238() {
         let sha1 = spec(Algorithm::Sha1, b"12345678901234567890", Kind::Totp, 8, 0);
-        let sha256 = spec(Algorithm::Sha256, b"12345678901234567890123456789012", Kind::Totp, 8, 0);
-        let sha512 = spec(Algorithm::Sha512, b"1234567890123456789012345678901234567890123456789012345678901234", Kind::Totp, 8, 0);
+        let sha256 = spec(
+            Algorithm::Sha256,
+            b"12345678901234567890123456789012",
+            Kind::Totp,
+            8,
+            0,
+        );
+        let sha512 = spec(
+            Algorithm::Sha512,
+            b"1234567890123456789012345678901234567890123456789012345678901234",
+            Kind::Totp,
+            8,
+            0,
+        );
         for (s, t, code) in [
             (&sha1, 59u64, "94287082"),
             (&sha1, 1111111109, "07081804"),
@@ -291,23 +337,58 @@ mod tests {
     // RFC 4226 appendix D.
     #[test]
     fn rfc4226() {
-        for (c, e) in ["755224", "287082", "359152", "969429", "338314"].iter().enumerate() {
-            assert_eq!(spec(Algorithm::Sha1, b"12345678901234567890", Kind::Hotp, 6, c as u64).code(0), *e);
+        for (c, e) in ["755224", "287082", "359152", "969429", "338314"]
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(
+                spec(
+                    Algorithm::Sha1,
+                    b"12345678901234567890",
+                    Kind::Hotp,
+                    6,
+                    c as u64
+                )
+                .code(0),
+                *e
+            );
         }
     }
 
     #[test]
     fn parse_uris() {
-        let s = OtpSpec::parse("otpauth://totp/GitHub:octocat?secret=JBSWY3DPEHPK3PXP&issuer=GitHub").unwrap();
-        assert_eq!((s.issuer.as_str(), s.account.as_str(), s.digits, s.period), ("GitHub", "octocat", 6, 30));
+        let s =
+            OtpSpec::parse("otpauth://totp/GitHub:octocat?secret=JBSWY3DPEHPK3PXP&issuer=GitHub")
+                .unwrap();
+        assert_eq!(
+            (s.issuer.as_str(), s.account.as_str(), s.digits, s.period),
+            ("GitHub", "octocat", 6, 30)
+        );
         assert_eq!(s.secret, b"Hello!\xde\xad\xbe\xef");
         assert_eq!(OtpSpec::parse(&s.to_uri()).unwrap(), s);
-        assert_eq!(OtpSpec::parse("jbsw y3dp ehpk 3pxp").unwrap().secret, s.secret);
-        let label = OtpSpec::parse("otpauth://totp/%E7%A4%BA%E4%BE%8B:me%40example.com?secret=JBSWY3DP").unwrap();
-        assert_eq!((label.issuer.as_str(), label.account.as_str()), ("示例", "me@example.com"));
+        assert_eq!(
+            OtpSpec::parse("jbsw y3dp ehpk 3pxp").unwrap().secret,
+            s.secret
+        );
+        let label =
+            OtpSpec::parse("otpauth://totp/%E7%A4%BA%E4%BE%8B:me%40example.com?secret=JBSWY3DP")
+                .unwrap();
+        assert_eq!(
+            (label.issuer.as_str(), label.account.as_str()),
+            ("示例", "me@example.com")
+        );
         assert!(OtpSpec::parse("otpauth://totp/x?secret=").is_err());
         assert!(OtpSpec::parse("hello world!").is_err());
-        assert_eq!(OtpSpec::parse("steam://JBSWY3DPEHPK3PXP").unwrap().code(0).len(), 5);
-        assert_eq!(base32_decode(&base32_encode(b"any bytes \x00\xff")).unwrap(), b"any bytes \x00\xff");
+        assert_eq!(
+            OtpSpec::parse("steam://JBSWY3DPEHPK3PXP")
+                .unwrap()
+                .code(0)
+                .len(),
+            5
+        );
+        assert_eq!(
+            base32_decode(&base32_encode(b"any bytes \x00\xff")).unwrap(),
+            b"any bytes \x00\xff"
+        );
     }
 }

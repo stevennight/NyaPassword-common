@@ -138,7 +138,9 @@ impl Field {
         match &self.value {
             Value::Null => true,
             Value::String(s) => s.is_empty(),
-            Value::Object(o) => o.values().all(|v| v.as_str().map(str::is_empty).unwrap_or(v.is_null())),
+            Value::Object(o) => o
+                .values()
+                .all(|v| v.as_str().map(str::is_empty).unwrap_or(v.is_null())),
             _ => false,
         }
     }
@@ -173,7 +175,13 @@ fn default_match() -> String {
 
 impl UrlEntry {
     pub fn new(url: impl Into<String>) -> Self {
-        Self { id: new_short_id("u"), url: url.into(), match_mode: default_match(), cert_sha256: vec![], extra: Map::new() }
+        Self {
+            id: new_short_id("u"),
+            url: url.into(),
+            match_mode: default_match(),
+            cert_sha256: vec![],
+            extra: Map::new(),
+        }
     }
 }
 
@@ -376,15 +384,23 @@ impl ItemContent {
     }
 
     pub fn username(&self) -> Option<String> {
-        self.by_purpose(purpose::USERNAME).map(Field::text).filter(|s| !s.is_empty())
+        self.by_purpose(purpose::USERNAME)
+            .map(Field::text)
+            .filter(|s| !s.is_empty())
     }
 
     pub fn password(&self) -> Option<String> {
-        self.by_purpose(purpose::PASSWORD).map(Field::text).filter(|s| !s.is_empty())
+        self.by_purpose(purpose::PASSWORD)
+            .map(Field::text)
+            .filter(|s| !s.is_empty())
     }
 
     pub fn totp(&self) -> Option<String> {
-        self.fields.iter().find(|f| f.kind == kind::TOTP).map(Field::text).filter(|s| !s.is_empty())
+        self.fields
+            .iter()
+            .find(|f| f.kind == kind::TOTP)
+            .map(Field::text)
+            .filter(|s| !s.is_empty())
     }
 
     /// Short line shown under the title in lists.
@@ -467,7 +483,10 @@ mod tests {
         let back: Value = serde_json::to_value(&item).unwrap();
         let orig: Value = serde_json::from_str(json).unwrap();
         assert_eq!(back["future_top"], orig["future_top"]);
-        assert_eq!(back["fields"][0]["future_field"], orig["fields"][0]["future_field"]);
+        assert_eq!(
+            back["fields"][0]["future_field"],
+            orig["fields"][0]["future_field"]
+        );
         assert_eq!(back["urls"][0]["future_url"], orig["urls"][0]["future_url"]);
         assert_eq!(back["autofill"]["future_af"], orig["autofill"]["future_af"]);
     }
@@ -475,8 +494,16 @@ mod tests {
     #[test]
     fn history_records_changed_secrets_only() {
         let mut a = ItemContent::new("login", "Site");
-        a.fields.push(Field::new("username", "用户名", kind::TEXT).with_purpose(purpose::USERNAME).with_value("me"));
-        a.fields.push(Field::new("password", "密码", kind::CONCEALED).with_purpose(purpose::PASSWORD).with_value("old"));
+        a.fields.push(
+            Field::new("username", "用户名", kind::TEXT)
+                .with_purpose(purpose::USERNAME)
+                .with_value("me"),
+        );
+        a.fields.push(
+            Field::new("password", "密码", kind::CONCEALED)
+                .with_purpose(purpose::PASSWORD)
+                .with_value("old"),
+        );
         let mut b = a.clone();
         b.field_mut("username").unwrap().value = "me2".into();
         b.field_mut("password").unwrap().value = "new".into();

@@ -57,10 +57,15 @@ impl Client {
         }
         let mut report = SyncReport::default();
 
-        let info: api_t::ServerInfo = api::call::<api::Empty, _>(&*self.transport()?, "GET", "/v1/server-info", None, None).await?;
+        let info: api_t::ServerInfo =
+            api::call::<api::Empty, _>(&*self.transport()?, "GET", "/v1/server-info", None, None)
+                .await?;
         let epoch = info.epoch;
-        let acct: api_t::AccountResp = self.authed::<api::Empty, _>("GET", "/v1/account", None).await?;
-        let server_seqs: HashMap<String, i64> = acct.vaults.iter().map(|v| (v.id.clone(), v.seq)).collect();
+        let acct: api_t::AccountResp = self
+            .authed::<api::Empty, _>("GET", "/v1/account", None)
+            .await?;
+        let server_seqs: HashMap<String, i64> =
+            acct.vaults.iter().map(|v| (v.id.clone(), v.seq)).collect();
         self.apply_account_resp(acct)?;
 
         let mut acc = self.account()?;
@@ -68,7 +73,13 @@ impl Client {
 
         for vault_id in acc.vaults.iter().map(|v| v.id.clone()).collect::<Vec<_>>() {
             let vk = self.vault_key(&vault_id)?;
-            let local_seq = self.account()?.vaults.iter().find(|v| v.id == vault_id).map(|v| v.seq).unwrap_or(0);
+            let local_seq = self
+                .account()?
+                .vaults
+                .iter()
+                .find(|v| v.id == vault_id)
+                .map(|v| v.seq)
+                .unwrap_or(0);
             let server_seq = server_seqs.get(&vault_id).copied().unwrap_or(0);
             let mut full = epoch_changed || server_seq < local_seq;
 
@@ -86,7 +97,9 @@ impl Client {
                 }
             }
 
-            let d: api_t::DigestResp = self.authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/digest"), None).await?;
+            let d: api_t::DigestResp = self
+                .authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/digest"), None)
+                .await?;
             if d.digest != self.local_digest(&vault_id)? {
                 self.reconcile(&vault_id, &vk, &mut report).await?;
                 report.full_resyncs += 1;
@@ -105,7 +118,9 @@ impl Client {
     fn local_digest(&self, vault_id: &str) -> Result<String> {
         let items = self.store.list_items(vault_id)?;
         let heads: Vec<&ItemRecord> = items.iter().filter_map(|i| i.server.as_ref()).collect();
-        Ok(api_t::vault_digest(heads.iter().map(|r| (r.item_id.as_str(), r.revision, r.deleted, r.hash.as_str()))))
+        Ok(api_t::vault_digest(heads.iter().map(|r| {
+            (r.item_id.as_str(), r.revision, r.deleted, r.hash.as_str())
+        })))
     }
 
     fn set_vault_seq(&self, vault_id: &str, seq: i64) -> Result<StoreOp> {
@@ -119,17 +134,36 @@ impl Client {
     }
 
     async fn pull(&self, vault_id: &str, vk: &Key32, report: &mut SyncReport) -> Result<()> {
-        let mut since = self.account()?.vaults.iter().find(|v| v.id == vault_id).map(|v| v.seq).unwrap_or(0);
+        let mut since = self
+            .account()?
+            .vaults
+            .iter()
+            .find(|v| v.id == vault_id)
+            .map(|v| v.seq)
+            .unwrap_or(0);
         loop {
-            let page: api_t::ChangesResp =
-                self.authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/changes?since={since}&limit={PAGE}"), None).await?;
+            let page: api_t::ChangesResp = self
+                .authed::<api::Empty, _>(
+                    "GET",
+                    &format!("/v1/vaults/{vault_id}/changes?since={since}&limit={PAGE}"),
+                    None,
+                )
+                .await?;
             let mut ops = vec![];
             let mut touched = vec![];
+            let mut touched_purged: Vec<String> = vec![];
             for rec in page.items {
                 if let Some(li) = self.apply_remote(vault_id, vk, rec, report)? {
                     touched.push(li.clone());
                     ops.push(StoreOp::PutItem(li));
                 }
+            }
+            for id in &page.purged {
+                match self.apply_purge(vault_id, id)? {
+                    Some(op) => ops.push(op),
+                    None => continue,
+                }
+                touched_purged.push(id.clone());
             }
             since = page.next_seq;
             ops.push(self.set_vault_seq(vault_id, since)?);
@@ -139,6 +173,13 @@ impl Client {
                 for li in &touched {
                     st.cache.refresh_item(vk, li);
                 }
+                for id in &touched_purged {
+                    if let Ok(Some(li)) = self.store.get_item(vault_id, id) {
+                        st.cache.refresh_item(vk, &li);
+                    } else {
+                        st.cache.items.remove(&(vault_id.to_string(), id.clone()));
+                    }
+                }
             }
             if !page.has_more {
                 return Ok(());
@@ -147,14 +188,25 @@ impl Client {
     }
 
     /// Folds one server record into the replica. Returns the new local state, if it changed.
-    fn apply_remote(&self, vault_id: &str, vk: &Key32, rec: ItemRecord, report: &mut SyncReport) -> Result<Option<LocalItem>> {
+    fn apply_remote(
+        &self,
+        vault_id: &str,
+        vk: &Key32,
+        rec: ItemRecord,
+        report: &mut SyncReport,
+    ) -> Result<Option<LocalItem>> {
         let wk = d64(&rec.wrapped_key)?;
         let ct = d64(&rec.ciphertext)?;
         if api_t::item_hash(&wk, &ct) != rec.hash {
-            return Err(CoreError::Network(format!("item {} arrived corrupted (hash mismatch)", rec.item_id)));
+            return Err(CoreError::Network(format!(
+                "item {} arrived corrupted (hash mismatch)",
+                rec.item_id
+            )));
         }
         let local = self.store.get_item(vault_id, &rec.item_id)?;
-        let mut li = local.clone().unwrap_or(LocalItem { vault_id: vault_id.to_string(), item_id: rec.item_id.clone(), server: None, pending: None });
+        let mut li = local
+            .clone()
+            .unwrap_or_else(|| LocalItem::new(vault_id, &rec.item_id));
 
         if let Some(s) = &li.server {
             if rec.revision < s.revision {
@@ -168,11 +220,13 @@ impl Client {
         report.pulled += 1;
 
         let Some(pending) = li.pending.clone() else {
-            li.server = Some(rec);
+            li.set_server(rec);
             return Ok(Some(li));
         };
-        if pending.base_revision == rec.revision && li.server.as_ref().is_some_and(|s| s.hash == rec.hash) {
-            li.server = Some(rec);
+        if pending.base_revision == rec.revision
+            && li.server.as_ref().is_some_and(|s| s.hash == rec.hash)
+        {
+            li.set_server(rec);
             return Ok(Some(li));
         }
 
@@ -183,12 +237,16 @@ impl Client {
                 // Keep both untouched: the record becomes the base, our edit stays pending (and
                 // will be refused as a conflict until a client that can read the record merges).
                 report.undecryptable += 1;
-                li.server = Some(rec);
+                li.set_server(rec);
                 return Ok(Some(li));
             }
         };
         let mine = decrypt_pending(vk, vault_id, &li.item_id, &pending)?;
-        let base: Option<ItemContent> = li.server.as_ref().and_then(|s| decrypt_record(vk, vault_id, s).ok()).map(|d| d.content);
+        let base: Option<ItemContent> = li
+            .server
+            .as_ref()
+            .and_then(|s| decrypt_record(vk, vault_id, s).ok())
+            .map(|d| d.content);
         let device = self.account()?.device_id;
         let outcome = merge_items(base.as_ref(), &mine.content, &remote.content, &device);
         report.merged += 1;
@@ -209,12 +267,17 @@ impl Client {
         };
 
         let merged = outcome.content;
-        let ik = if remote.read_only || mine.read_only { None } else { Some(remote.ik.clone()) };
-        li.server = Some(rec.clone());
+        let ik = if remote.read_only || mine.read_only {
+            None
+        } else {
+            Some(remote.ik.clone())
+        };
+        li.set_server(rec.clone());
         if merged == remote.content && deleted == rec.deleted {
             li.pending = None;
         } else if let Some(ik) = ik {
-            let (wrapped_key, ciphertext, format_major) = seal_item(vk, vault_id, &li.item_id, &ik, &merged)?;
+            let (wrapped_key, ciphertext, format_major) =
+                seal_item(vk, vault_id, &li.item_id, &ik, &merged)?;
             li.pending = Some(PendingEdit {
                 op_id: uuid::Uuid::new_v4().to_string(),
                 base_revision: rec.revision,
@@ -227,10 +290,36 @@ impl Client {
             });
         } else {
             // A newer client wrote the remote revision: we must not rewrite it. Keep our
-            // edit pending (based on the old revision) so it is visible and not lost.
+            // edit (visible, not lost) but stop pushing it.
+            if let Some(p) = &mut li.pending {
+                p.rejected = Some(
+                    "the item was changed by a newer version of NyaPassword; update this app"
+                        .into(),
+                );
+            }
             report.rejected += 1;
         }
         Ok(Some(li))
+    }
+
+    /// An item was permanently deleted on the server. Drop it, unless this
+    /// device has an unsynced edit: then the edit re-creates it (an edit is
+    /// never lost).
+    fn apply_purge(&self, vault_id: &str, item_id: &str) -> Result<Option<StoreOp>> {
+        let Some(mut li) = self.store.get_item(vault_id, item_id)? else {
+            return Ok(None);
+        };
+        match &mut li.pending {
+            Some(p) => {
+                p.base_revision = 0;
+                li.server = None;
+                Ok(Some(StoreOp::PutItem(li)))
+            }
+            None => Ok(Some(StoreOp::DeleteItem {
+                vault_id: vault_id.to_string(),
+                item_id: item_id.to_string(),
+            })),
+        }
     }
 
     /// Pushes pending edits. Returns how many came back as conflicts.
@@ -259,21 +348,39 @@ impl Client {
                     }
                 })
                 .collect();
-            let sent: HashMap<String, PushItem> = items.iter().map(|i| (i.item_id.clone(), i.clone())).collect();
-            let resp: api_t::PushResp = self.authed("POST", &format!("/v1/vaults/{vault_id}/items/batch"), Some(&api_t::PushReq { items, atomic: false })).await?;
+            let sent: HashMap<String, PushItem> = items
+                .iter()
+                .map(|i| (i.item_id.clone(), i.clone()))
+                .collect();
+            let resp: api_t::PushResp = self
+                .authed(
+                    "POST",
+                    &format!("/v1/vaults/{vault_id}/items/batch"),
+                    Some(&api_t::PushReq {
+                        items,
+                        atomic: false,
+                    }),
+                )
+                .await?;
             let device_id = self.account()?.device_id;
             let mut ops = vec![];
             let mut touched = vec![];
             for r in resp.results {
-                let Some(sent_item) = sent.get(&r.item_id) else { continue };
+                let Some(sent_item) = sent.get(&r.item_id) else {
+                    continue;
+                };
                 // Re-read: the user may have edited again while the request was in flight.
-                let Some(mut li) = self.store.get_item(vault_id, &r.item_id)? else { continue };
+                let Some(mut li) = self.store.get_item(vault_id, &r.item_id)? else {
+                    continue;
+                };
                 match r.status {
                     PushStatus::Ok => {
-                        let revision = r.revision.ok_or_else(|| CoreError::Network("push result without revision".into()))?;
+                        let revision = r.revision.ok_or_else(|| {
+                            CoreError::Network("push result without revision".into())
+                        })?;
                         let wk = d64(&sent_item.wrapped_key)?;
                         let ct = d64(&sent_item.ciphertext)?;
-                        li.server = Some(ItemRecord {
+                        li.set_server(ItemRecord {
                             item_id: r.item_id.clone(),
                             revision,
                             seq: r.seq.unwrap_or(0),
@@ -300,7 +407,8 @@ impl Client {
                     PushStatus::Rejected => {
                         if let Some(p) = &mut li.pending {
                             if p.op_id == sent_item.op_id {
-                                p.rejected = Some(r.reason.clone().unwrap_or_else(|| "rejected".into()));
+                                p.rejected =
+                                    Some(r.reason.clone().unwrap_or_else(|| "rejected".into()));
                             }
                         }
                         report.rejected += 1;
@@ -323,15 +431,22 @@ impl Client {
         let mut server: HashMap<String, ItemRecord> = HashMap::new();
         let mut since = 0;
         let vault_seq;
+        let purged: HashSet<String>;
         loop {
-            let page: api_t::ChangesResp =
-                self.authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/changes?since={since}&limit={PAGE}"), None).await?;
+            let page: api_t::ChangesResp = self
+                .authed::<api::Empty, _>(
+                    "GET",
+                    &format!("/v1/vaults/{vault_id}/changes?since={since}&limit={PAGE}"),
+                    None,
+                )
+                .await?;
             for r in page.items {
                 server.insert(r.item_id.clone(), r);
             }
             since = page.next_seq;
             if !page.has_more {
                 vault_seq = page.vault_seq;
+                purged = page.purged.into_iter().collect();
                 break;
             }
         }
@@ -340,18 +455,51 @@ impl Client {
         let mut ops = vec![];
         let mut touched = vec![];
 
+        let mut dropped = vec![];
         for mut li in locals {
             let srv = server.remove(&li.item_id);
+            if srv.is_none() && purged.contains(&li.item_id) {
+                match self.apply_purge(vault_id, &li.item_id)? {
+                    Some(StoreOp::PutItem(kept)) => li = kept,
+                    Some(op) => {
+                        ops.push(op);
+                        dropped.push(li.item_id.clone());
+                        continue;
+                    }
+                    None => continue,
+                }
+                touched.push(li.clone());
+                ops.push(StoreOp::PutItem(li));
+                continue;
+            }
             match (srv, li.server.clone()) {
-                (Some(rec), Some(mine)) if rec.revision < mine.revision || (rec.revision == mine.revision && rec.hash != mine.hash) => {
-                    // The server lost revisions this device had seen (restored from an older backup,
-                    // or diverged). Re-upload this device's newest state on top of the server's.
-                    let restored = self.restore_onto(vault_id, vk, &mut li, Some(rec), report)?;
-                    if restored {
+                (Some(rec), Some(mine)) if rec.hash == mine.hash => li.set_server(rec),
+                (Some(rec), Some(_)) if li.seen.contains(&rec.hash) => {
+                    // The server is at a revision this device had already seen: it lost the
+                    // newer ones (restored from an older backup). Put ours back on top.
+                    if self.restore_onto(vault_id, vk, &mut li, Some(rec), false, report)? {
                         report.restored_to_server += 1;
                     }
                 }
-                (Some(rec), _) => {
+                (Some(rec), Some(mine)) => {
+                    // A state this device never saw. If the server's history contains our head,
+                    // it is simply newer; otherwise the histories diverged: merge, keep both.
+                    let newer = rec.revision > mine.revision
+                        && self.server_has(vault_id, &rec.item_id, &mine.hash).await?;
+                    if newer {
+                        let mut tmp = SyncReport::default();
+                        if let Some(new_li) = self.apply_remote(vault_id, vk, rec, &mut tmp)? {
+                            li = new_li;
+                        }
+                        report.pulled += tmp.pulled;
+                        report.merged += tmp.merged;
+                        report.conflicts += tmp.conflicts;
+                        report.undecryptable += tmp.undecryptable;
+                    } else if self.restore_onto(vault_id, vk, &mut li, Some(rec), true, report)? {
+                        report.restored_to_server += 1;
+                    }
+                }
+                (Some(rec), None) => {
                     let mut tmp_report = SyncReport::default();
                     if let Some(new_li) = self.apply_remote(vault_id, vk, rec, &mut tmp_report)? {
                         li = new_li;
@@ -363,7 +511,7 @@ impl Client {
                 }
                 (None, Some(_)) => {
                     // The server does not have this item at all any more.
-                    if self.restore_onto(vault_id, vk, &mut li, None, report)? {
+                    if self.restore_onto(vault_id, vk, &mut li, None, false, report)? {
                         report.restored_to_server += 1;
                     }
                 }
@@ -389,17 +537,51 @@ impl Client {
         for li in &touched {
             st.cache.refresh_item(vk, li);
         }
+        for id in dropped {
+            st.cache.items.remove(&(vault_id.to_string(), id));
+        }
         Ok(())
     }
 
+    /// Does the server's history of an item contain a revision with this hash?
+    async fn server_has(&self, vault_id: &str, item_id: &str, hash: &str) -> Result<bool> {
+        let r: api_t::RevisionsResp = self
+            .authed::<api::Empty, _>(
+                "GET",
+                &format!("/v1/vaults/{vault_id}/items/{item_id}/revisions"),
+                None,
+            )
+            .await?;
+        Ok(r.revisions.iter().any(|x| x.hash == hash))
+    }
+
     /// Makes this device's newest state of an item a pending edit on top of the
-    /// server's (older or missing) record, merging when they diverged.
-    fn restore_onto(&self, vault_id: &str, vk: &Key32, li: &mut LocalItem, server: Option<ItemRecord>, report: &mut SyncReport) -> Result<bool> {
+    /// server's (older or missing) record. `diverged`: the server's record is not
+    /// an ancestor of ours, so merge without a base (both sides' values survive).
+    fn restore_onto(
+        &self,
+        vault_id: &str,
+        vk: &Key32,
+        li: &mut LocalItem,
+        server: Option<ItemRecord>,
+        diverged: bool,
+        report: &mut SyncReport,
+    ) -> Result<bool> {
         let base_revision = server.as_ref().map(|r| r.revision).unwrap_or(0);
         // Newest local state: the pending edit if any, else the last server head we saw.
         let (wrapped_key, ciphertext, format_major, deleted) = match (&li.pending, &li.server) {
-            (Some(p), _) => (p.wrapped_key.clone(), p.ciphertext.clone(), p.format_major, p.deleted),
-            (None, Some(s)) => (s.wrapped_key.clone(), s.ciphertext.clone(), s.format_major, s.deleted),
+            (Some(p), _) => (
+                p.wrapped_key.clone(),
+                p.ciphertext.clone(),
+                p.format_major,
+                p.deleted,
+            ),
+            (None, Some(s)) => (
+                s.wrapped_key.clone(),
+                s.ciphertext.clone(),
+                s.format_major,
+                s.deleted,
+            ),
             (None, None) => return Ok(false),
         };
         let mut new_pending = PendingEdit {
@@ -412,14 +594,18 @@ impl Client {
             created_at: npw_model::now_ms(),
             rejected: None,
         };
-        if let Some(rec) = &server {
+        if let Some(rec) = server.as_ref().filter(|_| diverged) {
             // Same item, diverged history: merge without a base so both sides' values survive.
-            if let (Ok(theirs), Ok(mine)) = (decrypt_record(vk, vault_id, rec), decrypt_pending(vk, vault_id, &li.item_id, &new_pending)) {
+            if let (Ok(theirs), Ok(mine)) = (
+                decrypt_record(vk, vault_id, rec),
+                decrypt_pending(vk, vault_id, &li.item_id, &new_pending),
+            ) {
                 if theirs.content != mine.content {
                     let device = self.account()?.device_id;
                     let out = merge_items(None, &mine.content, &theirs.content, &device);
                     report.conflicts += out.new_conflicts;
-                    let (wk, ct, fm) = seal_item(vk, vault_id, &li.item_id, &theirs.ik, &out.content)?;
+                    let (wk, ct, fm) =
+                        seal_item(vk, vault_id, &li.item_id, &theirs.ik, &out.content)?;
                     new_pending.wrapped_key = wk;
                     new_pending.ciphertext = ct;
                     new_pending.format_major = fm;
@@ -427,7 +613,10 @@ impl Client {
                 }
             }
         }
-        li.server = server;
+        match server {
+            Some(r) => li.set_server(r),
+            None => li.server = None,
+        }
         li.pending = Some(new_pending);
         Ok(true)
     }

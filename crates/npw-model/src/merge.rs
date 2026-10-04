@@ -21,7 +21,15 @@ use serde_json::{Map, Value};
 use crate::format::parse_version;
 use crate::{new_short_id, now_ms, Conflict, ItemContent};
 
-const KEYED_ARRAYS: &[&str] = &["fields", "sections", "urls", "passkeys", "attachments", "history", "conflicts"];
+const KEYED_ARRAYS: &[&str] = &[
+    "fields",
+    "sections",
+    "urls",
+    "passkeys",
+    "attachments",
+    "history",
+    "conflicts",
+];
 const SET_ARRAYS: &[&str] = &["tags"];
 
 pub struct MergeOutcome {
@@ -58,7 +66,10 @@ impl Ctx<'_> {
         if path.len() >= 2 && path[0] == "fields" {
             for side in [self.remote, self.local] {
                 if let Some(arr) = side.get("fields").and_then(Value::as_array) {
-                    if let Some(f) = arr.iter().find(|f| f.get("id").and_then(Value::as_str) == Some(&path[1])) {
+                    if let Some(f) = arr
+                        .iter()
+                        .find(|f| f.get("id").and_then(Value::as_str) == Some(&path[1]))
+                    {
                         if let Some(l) = f.get("label").and_then(Value::as_str) {
                             return l.to_string();
                         }
@@ -70,19 +81,34 @@ impl Ctx<'_> {
     }
 }
 
-pub fn merge_items(base: Option<&ItemContent>, local: &ItemContent, remote: &ItemContent, device: &str) -> MergeOutcome {
+pub fn merge_items(
+    base: Option<&ItemContent>,
+    local: &ItemContent,
+    remote: &ItemContent,
+    device: &str,
+) -> MergeOutcome {
     let b = base.map(|b| serde_json::to_value(b).expect("serializable"));
     let l = serde_json::to_value(local).expect("serializable");
     let r = serde_json::to_value(remote).expect("serializable");
-    let mut ctx = Ctx { conflicts: vec![], device, now: now_ms(), local: &l, remote: &r };
-    let merged = merge_value(b.as_ref(), Some(&l), Some(&r), &mut vec![], &mut ctx).unwrap_or(Value::Null);
+    let mut ctx = Ctx {
+        conflicts: vec![],
+        device,
+        now: now_ms(),
+        local: &l,
+        remote: &r,
+    };
+    let merged =
+        merge_value(b.as_ref(), Some(&l), Some(&r), &mut vec![], &mut ctx).unwrap_or(Value::Null);
     let new_conflicts = ctx.conflicts.len();
     let conflicts = std::mem::take(&mut ctx.conflicts);
 
     match serde_json::from_value::<ItemContent>(merged) {
         Ok(mut content) => {
             content.conflicts.extend(conflicts);
-            MergeOutcome { content, new_conflicts }
+            MergeOutcome {
+                content,
+                new_conflicts,
+            }
         }
         Err(_) => {
             // The merged tree no longer fits the schema (cannot happen with
@@ -99,12 +125,21 @@ pub fn merge_items(base: Option<&ItemContent>, local: &ItemContent, remote: &Ite
                 at: now_ms(),
                 extra: Map::new(),
             });
-            MergeOutcome { content, new_conflicts: 1 }
+            MergeOutcome {
+                content,
+                new_conflicts: 1,
+            }
         }
     }
 }
 
-fn merge_value(base: Option<&Value>, local: Option<&Value>, remote: Option<&Value>, path: &mut Vec<String>, ctx: &mut Ctx) -> Option<Value> {
+fn merge_value(
+    base: Option<&Value>,
+    local: Option<&Value>,
+    remote: Option<&Value>,
+    path: &mut Vec<String>,
+    ctx: &mut Ctx,
+) -> Option<Value> {
     if local == remote {
         return local.cloned();
     }
@@ -122,7 +157,11 @@ fn merge_value(base: Option<&Value>, local: Option<&Value>, remote: Option<&Valu
         (None, None) => return None,
     };
 
-    let top = if path.len() == 1 { Some(path[0].as_str()) } else { None };
+    let top = if path.len() == 1 {
+        Some(path[0].as_str())
+    } else {
+        None
+    };
     match top {
         Some("updated_at") => return Some(max_num(l, r)),
         Some("created_at") => return Some(min_num(l, r)),
@@ -135,7 +174,9 @@ fn merge_value(base: Option<&Value>, local: Option<&Value>, remote: Option<&Valu
             let bo = base.and_then(Value::as_object);
             Some(Value::Object(merge_objects(bo, lo, ro, path, ctx)))
         }
-        (Value::Array(la), Value::Array(ra)) if top.is_some_and(|t| KEYED_ARRAYS.contains(&t)) && all_keyed(la) && all_keyed(ra) => {
+        (Value::Array(la), Value::Array(ra))
+            if top.is_some_and(|t| KEYED_ARRAYS.contains(&t)) && all_keyed(la) && all_keyed(ra) =>
+        {
             let ba = base.and_then(Value::as_array).filter(|a| all_keyed(a));
             Some(Value::Array(merge_keyed(ba, la, ra, path, ctx)))
         }
@@ -160,7 +201,13 @@ fn merge_value(base: Option<&Value>, local: Option<&Value>, remote: Option<&Valu
     }
 }
 
-fn merge_objects(base: Option<&Map<String, Value>>, l: &Map<String, Value>, r: &Map<String, Value>, path: &mut Vec<String>, ctx: &mut Ctx) -> Map<String, Value> {
+fn merge_objects(
+    base: Option<&Map<String, Value>>,
+    l: &Map<String, Value>,
+    r: &Map<String, Value>,
+    path: &mut Vec<String>,
+    ctx: &mut Ctx,
+) -> Map<String, Value> {
     let mut keys: Vec<&String> = r.keys().collect();
     for k in l.keys() {
         if !r.contains_key(k) {
@@ -199,7 +246,13 @@ fn find<'a>(a: &'a [Value], id: &str) -> Option<&'a Value> {
     a.iter().find(|v| id_of(v) == Some(id))
 }
 
-fn merge_keyed(base: Option<&Vec<Value>>, l: &[Value], r: &[Value], path: &mut Vec<String>, ctx: &mut Ctx) -> Vec<Value> {
+fn merge_keyed(
+    base: Option<&Vec<Value>>,
+    l: &[Value],
+    r: &[Value],
+    path: &mut Vec<String>,
+    ctx: &mut Ctx,
+) -> Vec<Value> {
     let mut ids: Vec<&str> = r.iter().filter_map(id_of).collect();
     for v in l {
         let id = id_of(v).expect("checked by all_keyed");
@@ -210,7 +263,13 @@ fn merge_keyed(base: Option<&Vec<Value>>, l: &[Value], r: &[Value], path: &mut V
     let mut out = Vec::with_capacity(ids.len());
     for id in ids {
         path.push(id.to_string());
-        let merged = merge_value(base.and_then(|b| find(b, id)), find(l, id), find(r, id), path, ctx);
+        let merged = merge_value(
+            base.and_then(|b| find(b, id)),
+            find(l, id),
+            find(r, id),
+            path,
+            ctx,
+        );
         path.pop();
         if let Some(v) = merged {
             out.push(v);
@@ -270,8 +329,16 @@ mod tests {
 
     fn login() -> ItemContent {
         let mut c = ItemContent::new("login", "GitHub");
-        c.fields.push(Field::new("username", "用户名", kind::TEXT).with_purpose(purpose::USERNAME).with_value("octocat"));
-        c.fields.push(Field::new("password", "密码", kind::CONCEALED).with_purpose(purpose::PASSWORD).with_value("p0"));
+        c.fields.push(
+            Field::new("username", "用户名", kind::TEXT)
+                .with_purpose(purpose::USERNAME)
+                .with_value("octocat"),
+        );
+        c.fields.push(
+            Field::new("password", "密码", kind::CONCEALED)
+                .with_purpose(purpose::PASSWORD)
+                .with_value("p0"),
+        );
         c.tags = vec!["work".into()];
         c.notes = "line 1\nline 2\nline 3\n".into();
         c
@@ -335,9 +402,11 @@ mod tests {
     fn both_add_fields_keeps_both() {
         let base = login();
         let mut l = base.clone();
-        l.fields.push(Field::new("f_a", "A", kind::TEXT).with_value("a"));
+        l.fields
+            .push(Field::new("f_a", "A", kind::TEXT).with_value("a"));
         let mut r = base.clone();
-        r.fields.push(Field::new("f_b", "B", kind::TEXT).with_value("b"));
+        r.fields
+            .push(Field::new("f_b", "B", kind::TEXT).with_value("b"));
         let m = merge_items(Some(&base), &l, &r, "d");
         assert!(m.content.field("f_a").is_some() && m.content.field("f_b").is_some());
         assert_eq!(m.new_conflicts, 0);
@@ -355,8 +424,16 @@ mod tests {
         let m = merge_items(Some(&base), &l, &r, "d");
         assert_eq!(m.content.notes, r.notes);
         assert_eq!(m.new_conflicts, 2);
-        assert!(m.content.conflicts.iter().any(|c| c.path == "notes" && c.value == Value::String(l.notes.clone())));
-        assert!(m.content.conflicts.iter().any(|c| c.path == "future" && c.value == 1));
+        assert!(m
+            .content
+            .conflicts
+            .iter()
+            .any(|c| c.path == "notes" && c.value == Value::String(l.notes.clone())));
+        assert!(m
+            .content
+            .conflicts
+            .iter()
+            .any(|c| c.path == "future" && c.value == 1));
     }
 
     #[test]

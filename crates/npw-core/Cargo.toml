@@ -17,6 +17,8 @@ npw-model.workspace = true
 npw-api.workspace = true
 npw-match.workspace = true
 npw-otp.workspace = true
+npw-import.workspace = true
+npw-export.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -35,4 +37,5 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 reqwest = { version = "0.12", default-features = false, optional = true }
 
 [dev-dependencies]
+hex.workspace = true
 tokio = { workspace = true }

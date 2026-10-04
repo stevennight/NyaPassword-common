@@ -39,14 +39,45 @@ pub struct LocalItem {
     pub server: Option<ItemRecord>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending: Option<PendingEdit>,
+    /// Hashes of server revisions this device has seen (newest last, capped).
+    /// After a server restore they tell an older ancestor apart from a diverged history.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub seen: Vec<String>,
+}
+
+impl LocalItem {
+    pub fn new(vault_id: &str, item_id: &str) -> Self {
+        Self {
+            vault_id: vault_id.into(),
+            item_id: item_id.into(),
+            server: None,
+            pending: None,
+            seen: vec![],
+        }
+    }
+
+    /// Sets the server head and remembers its hash.
+    pub fn set_server(&mut self, rec: ItemRecord) {
+        if !self.seen.contains(&rec.hash) {
+            self.seen.push(rec.hash.clone());
+            if self.seen.len() > 64 {
+                self.seen.remove(0);
+            }
+        }
+        self.server = Some(rec);
+    }
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)] // short-lived batches; boxing buys nothing
 pub enum StoreOp {
     PutMeta(String, Vec<u8>),
     DeleteMeta(String),
     PutItem(LocalItem),
-    DeleteItem { vault_id: String, item_id: String },
+    DeleteItem {
+        vault_id: String,
+        item_id: String,
+    },
     PutBlob(String, Vec<u8>),
     DeleteBlob(String),
     /// Removes every item of a vault (vault deleted or full resync rebuild).
@@ -97,26 +128,47 @@ impl MemoryStore {
         let g = self.inner.lock().expect("store lock");
         let snap = Snapshot {
             v: 1,
-            meta: g.meta.iter().map(|(k, v)| (k.clone(), npw_crypto::b64(v))).collect(),
+            meta: g
+                .meta
+                .iter()
+                .map(|(k, v)| (k.clone(), npw_crypto::b64(v)))
+                .collect(),
             items: g.items.values().cloned().collect(),
-            blobs: g.blobs.iter().map(|(k, v)| (k.clone(), npw_crypto::b64(v))).collect(),
+            blobs: g
+                .blobs
+                .iter()
+                .map(|(k, v)| (k.clone(), npw_crypto::b64(v)))
+                .collect(),
         };
         serde_json::to_vec(&snap).expect("snapshot serializes")
     }
 
     pub fn from_snapshot(bytes: &[u8]) -> Result<Self> {
-        let snap: Snapshot = serde_json::from_slice(bytes).map_err(|e| CoreError::Store(format!("bad snapshot: {e}")))?;
+        let snap: Snapshot = serde_json::from_slice(bytes)
+            .map_err(|e| CoreError::Store(format!("bad snapshot: {e}")))?;
         let mut inner = MemInner::default();
         for (k, v) in snap.meta {
-            inner.meta.insert(k, npw_crypto::unb64(&v).ok_or_else(|| CoreError::Store("bad snapshot meta".into()))?);
+            inner.meta.insert(
+                k,
+                npw_crypto::unb64(&v)
+                    .ok_or_else(|| CoreError::Store("bad snapshot meta".into()))?,
+            );
         }
         for it in snap.items {
-            inner.items.insert((it.vault_id.clone(), it.item_id.clone()), it);
+            inner
+                .items
+                .insert((it.vault_id.clone(), it.item_id.clone()), it);
         }
         for (k, v) in snap.blobs {
-            inner.blobs.insert(k, npw_crypto::unb64(&v).ok_or_else(|| CoreError::Store("bad snapshot blob".into()))?);
+            inner.blobs.insert(
+                k,
+                npw_crypto::unb64(&v)
+                    .ok_or_else(|| CoreError::Store("bad snapshot blob".into()))?,
+            );
         }
-        Ok(Self { inner: Mutex::new(inner) })
+        Ok(Self {
+            inner: Mutex::new(inner),
+        })
     }
 
     /// Increases with every write; hosts persist the snapshot when it changes.
@@ -127,23 +179,56 @@ impl MemoryStore {
 
 impl Store for MemoryStore {
     fn get_meta(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        Ok(self.inner.lock().expect("store lock").meta.get(key).cloned())
+        Ok(self
+            .inner
+            .lock()
+            .expect("store lock")
+            .meta
+            .get(key)
+            .cloned())
     }
 
     fn get_item(&self, vault_id: &str, item_id: &str) -> Result<Option<LocalItem>> {
-        Ok(self.inner.lock().expect("store lock").items.get(&(vault_id.to_string(), item_id.to_string())).cloned())
+        Ok(self
+            .inner
+            .lock()
+            .expect("store lock")
+            .items
+            .get(&(vault_id.to_string(), item_id.to_string()))
+            .cloned())
     }
 
     fn list_items(&self, vault_id: &str) -> Result<Vec<LocalItem>> {
-        Ok(self.inner.lock().expect("store lock").items.values().filter(|i| i.vault_id == vault_id).cloned().collect())
+        Ok(self
+            .inner
+            .lock()
+            .expect("store lock")
+            .items
+            .values()
+            .filter(|i| i.vault_id == vault_id)
+            .cloned()
+            .collect())
     }
 
     fn list_all_items(&self) -> Result<Vec<LocalItem>> {
-        Ok(self.inner.lock().expect("store lock").items.values().cloned().collect())
+        Ok(self
+            .inner
+            .lock()
+            .expect("store lock")
+            .items
+            .values()
+            .cloned()
+            .collect())
     }
 
     fn get_blob(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        Ok(self.inner.lock().expect("store lock").blobs.get(key).cloned())
+        Ok(self
+            .inner
+            .lock()
+            .expect("store lock")
+            .blobs
+            .get(key)
+            .cloned())
     }
 
     fn apply(&self, ops: Vec<StoreOp>) -> Result<()> {
@@ -159,7 +244,8 @@ impl Store for MemoryStore {
                     next.meta.remove(&k);
                 }
                 StoreOp::PutItem(it) => {
-                    next.items.insert((it.vault_id.clone(), it.item_id.clone()), it);
+                    next.items
+                        .insert((it.vault_id.clone(), it.item_id.clone()), it);
                 }
                 StoreOp::DeleteItem { vault_id, item_id } => {
                     next.items.remove(&(vault_id, item_id));

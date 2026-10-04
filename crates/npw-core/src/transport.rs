@@ -43,8 +43,14 @@ impl ReqwestTransport {
     /// `base`: the server URL, e.g. `https://vault.example.com`.
     pub fn new(base: &str) -> Result<Self> {
         let base = base.trim_end_matches('/').to_string();
-        if !(base.starts_with("https://") || base.starts_with("http://localhost") || base.starts_with("http://127.0.0.1") || base.starts_with("http://[::1]")) {
-            return Err(CoreError::Invalid("the server URL must use https (http only for localhost)".into()));
+        if !(base.starts_with("https://")
+            || base.starts_with("http://localhost")
+            || base.starts_with("http://127.0.0.1")
+            || base.starts_with("http://[::1]"))
+        {
+            return Err(CoreError::Invalid(
+                "the server URL must use https (http only for localhost)".into(),
+            ));
         }
         #[cfg(not(target_arch = "wasm32"))]
         let client = reqwest::Client::builder()
@@ -65,17 +71,30 @@ impl ReqwestTransport {
 impl Transport for ReqwestTransport {
     async fn send(&self, req: HttpRequest) -> Result<HttpResponse> {
         let url = format!("{}{}", self.base, req.path);
-        let method = reqwest::Method::from_bytes(req.method.as_bytes()).map_err(|e| CoreError::Network(e.to_string()))?;
+        let method = reqwest::Method::from_bytes(req.method.as_bytes())
+            .map_err(|e| CoreError::Network(e.to_string()))?;
         let mut rb = self.client.request(method, url);
         if let Some(t) = &req.bearer {
             rb = rb.bearer_auth(t);
         }
         if let Some(b) = req.body {
-            rb = rb.header("content-type", req.content_type.unwrap_or("application/json")).body(b);
+            rb = rb
+                .header(
+                    "content-type",
+                    req.content_type.unwrap_or("application/json"),
+                )
+                .body(b);
         }
-        let resp = rb.send().await.map_err(|e| CoreError::Network(e.to_string()))?;
+        let resp = rb
+            .send()
+            .await
+            .map_err(|e| CoreError::Network(e.to_string()))?;
         let status = resp.status().as_u16();
-        let body = resp.bytes().await.map_err(|e| CoreError::Network(e.to_string()))?.to_vec();
+        let body = resp
+            .bytes()
+            .await
+            .map_err(|e| CoreError::Network(e.to_string()))?
+            .to_vec();
         Ok(HttpResponse { status, body })
     }
 }

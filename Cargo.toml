@@ -23,7 +23,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = false
-rust-version = "1.85"
+rust-version = "1.89"
 
 [workspace.dependencies]
 npw-crypto = { path = "crates/npw-crypto" }
@@ -76,3 +76,12 @@ debug = "line-tables-only"
 opt-level = 2
 [profile.test.package."*"]
 opt-level = 2
+
+# The WebAssembly build of the core (web vault, browser extension): small, no debug info.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+debug = false
+strip = true

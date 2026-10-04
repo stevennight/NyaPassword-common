@@ -24,7 +24,8 @@ pub struct SearchIndex {
 }
 
 fn has_han(s: &str) -> bool {
-    s.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c) || ('\u{3400}'..='\u{4dbf}').contains(&c))
+    s.chars()
+        .any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c) || ('\u{3400}'..='\u{4dbf}').contains(&c))
 }
 
 fn units(s: &str) -> Vec<Unit> {
@@ -94,7 +95,14 @@ pub fn index(c: &ItemContent) -> SearchIndex {
         short.push(' ');
         short.push_str(t);
     }
-    SearchIndex { text: c.search_text(), units: if has_han(&short) { units(&short) } else { vec![] } }
+    SearchIndex {
+        text: c.search_text(),
+        units: if has_han(&short) {
+            units(&short)
+        } else {
+            vec![]
+        },
+    }
 }
 
 pub struct Query {
@@ -103,7 +111,9 @@ pub struct Query {
 
 impl Query {
     pub fn parse(q: &str) -> Self {
-        Self { terms: q.split_whitespace().map(str::to_lowercase).collect() }
+        Self {
+            terms: q.split_whitespace().map(str::to_lowercase).collect(),
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -111,7 +121,9 @@ impl Query {
     }
 
     pub fn matches(&self, idx: &SearchIndex) -> bool {
-        self.terms.iter().all(|t| idx.text.contains(t.as_str()) || (t.is_ascii() && pinyin_matches(&idx.units, t)))
+        self.terms.iter().all(|t| {
+            idx.text.contains(t.as_str()) || (t.is_ascii() && pinyin_matches(&idx.units, t))
+        })
     }
 
     /// Higher for title hits, highest for a title prefix (also in pinyin).
@@ -123,9 +135,13 @@ impl Query {
         let title_units = if has_han(title) { units(title) } else { vec![] };
         let mut s = 0;
         for term in &self.terms {
-            if t.starts_with(term.as_str()) || (term.is_ascii() && pinyin_prefix(&title_units, term)) {
+            if t.starts_with(term.as_str())
+                || (term.is_ascii() && pinyin_prefix(&title_units, term))
+            {
                 s += 100;
-            } else if t.contains(term.as_str()) || (term.is_ascii() && pinyin_matches(&title_units, term)) {
+            } else if t.contains(term.as_str())
+                || (term.is_ascii() && pinyin_matches(&title_units, term))
+            {
                 s += 50;
             } else if idx.text.contains(term.as_str()) {
                 s += 10;
@@ -144,13 +160,27 @@ mod tests {
         let mut c = ItemContent::new("bank_account", "招商银行 储蓄账户");
         c.tags = vec!["金融".into()];
         let idx = index(&c);
-        for q in ["zs", "zsyh", "zhaoshang", "zhaoshangyinhang", "zhaosh", "招商", "jr", "储蓄", "zhaoshang yinhang", "yhcx", "yinxing"] {
+        for q in [
+            "zs",
+            "zsyh",
+            "zhaoshang",
+            "zhaoshangyinhang",
+            "zhaosh",
+            "招商",
+            "jr",
+            "储蓄",
+            "zhaoshang yinhang",
+            "yhcx",
+            "yinxing",
+        ] {
             assert!(Query::parse(q).matches(&idx), "{q}");
         }
         for q in ["gs", "zsx", "yhzs"] {
             assert!(!Query::parse(q).matches(&idx), "{q}");
         }
-        assert!(Query::parse("zs").score(&idx, &c.title) > Query::parse("cx").score(&idx, &c.title));
+        assert!(
+            Query::parse("zs").score(&idx, &c.title) > Query::parse("cx").score(&idx, &c.title)
+        );
     }
 
     #[test]

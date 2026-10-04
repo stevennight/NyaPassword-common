@@ -45,19 +45,44 @@ pub struct DecodedItem {
 
 pub fn decode_item(bytes: &[u8]) -> Result<DecodedItem, FormatError> {
     let raw: Value = serde_json::from_slice(bytes).map_err(|e| FormatError::Json(e.to_string()))?;
-    let version = raw.get("format").and_then(Value::as_str).and_then(parse_version).ok_or(FormatError::NoVersion)?;
+    let version = raw
+        .get("format")
+        .and_then(Value::as_str)
+        .and_then(parse_version)
+        .ok_or(FormatError::NoVersion)?;
     let typed: Result<ItemContent, _> = serde_json::from_value(raw.clone());
     match typed {
-        Ok(content) if version.0 <= FORMAT_MAJOR => Ok(DecodedItem { content, raw, version, read_only: false }),
-        Ok(content) => Ok(DecodedItem { content, raw, version, read_only: true }),
+        Ok(content) if version.0 <= FORMAT_MAJOR => Ok(DecodedItem {
+            content,
+            raw,
+            version,
+            read_only: false,
+        }),
+        Ok(content) => Ok(DecodedItem {
+            content,
+            raw,
+            version,
+            read_only: true,
+        }),
         Err(_) => {
             // Never guess at an item we cannot parse: show what we can, refuse to edit.
             let mut content = ItemContent::new(
-                raw.get("template").and_then(Value::as_str).unwrap_or("unknown"),
+                raw.get("template")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown"),
                 raw.get("title").and_then(Value::as_str).unwrap_or("?"),
             );
-            content.format = raw.get("format").and_then(Value::as_str).unwrap_or("?").to_string();
-            Ok(DecodedItem { content, raw, version, read_only: true })
+            content.format = raw
+                .get("format")
+                .and_then(Value::as_str)
+                .unwrap_or("?")
+                .to_string();
+            Ok(DecodedItem {
+                content,
+                raw,
+                version,
+                read_only: true,
+            })
         }
     }
 }
@@ -76,7 +101,9 @@ pub fn encode_item(content: &ItemContent) -> Vec<u8> {
 
 /// The major version an item will be written with (bound into the encryption's associated data).
 pub fn format_major_of(content: &ItemContent) -> u16 {
-    parse_version(&content.format).map(|v| v.0.max(FORMAT_MAJOR)).unwrap_or(FORMAT_MAJOR)
+    parse_version(&content.format)
+        .map(|v| v.0.max(FORMAT_MAJOR))
+        .unwrap_or(FORMAT_MAJOR)
 }
 
 #[cfg(test)]
@@ -98,7 +125,8 @@ mod tests {
         assert_eq!(d.content.title, "b");
 
         let old = br#"{"format":"0.9","template":"login","title":"c"}"#;
-        let out: Value = serde_json::from_slice(&encode_item(&decode_item(old).unwrap().content)).unwrap();
+        let out: Value =
+            serde_json::from_slice(&encode_item(&decode_item(old).unwrap().content)).unwrap();
         assert_eq!(out["format"], FORMAT_VERSION);
     }
 

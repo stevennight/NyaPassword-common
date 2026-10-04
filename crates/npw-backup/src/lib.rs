@@ -65,11 +65,17 @@ impl Manifest {
 /// An age X25519 key pair: (identity `AGE-SECRET-KEY-1...`, recipient `age1...`).
 pub fn generate_identity() -> (String, String) {
     let id = age::x25519::Identity::generate();
-    (id.to_string().expose_secret().to_string(), id.to_public().to_string())
+    (
+        id.to_string().expose_secret().to_string(),
+        id.to_public().to_string(),
+    )
 }
 
 pub fn recipient_of(identity: &str) -> Result<String> {
-    let id: age::x25519::Identity = identity.trim().parse().map_err(|e: &str| BackupError::Age(e.to_string()))?;
+    let id: age::x25519::Identity = identity
+        .trim()
+        .parse()
+        .map_err(|e: &str| BackupError::Age(e.to_string()))?;
     Ok(id.to_public().to_string())
 }
 
@@ -79,10 +85,18 @@ pub fn valid_recipient(r: &str) -> bool {
 
 /// Builds the archive and encrypts it. `files`: (name, content); the manifest's
 /// `files` map is filled in here.
-pub fn seal(mut manifest: Manifest, files: &[(&str, &[u8])], recipients: &[String]) -> Result<Vec<u8>> {
+pub fn seal(
+    mut manifest: Manifest,
+    files: &[(&str, &[u8])],
+    recipients: &[String],
+) -> Result<Vec<u8>> {
     manifest.format = FORMAT;
-    manifest.files = files.iter().map(|(n, d)| (n.to_string(), npw_crypto::sha256_hex(d))).collect();
-    let manifest_json = serde_json::to_vec_pretty(&manifest).map_err(|e| BackupError::Archive(e.to_string()))?;
+    manifest.files = files
+        .iter()
+        .map(|(n, d)| (n.to_string(), npw_crypto::sha256_hex(d)))
+        .collect();
+    let manifest_json =
+        serde_json::to_vec_pretty(&manifest).map_err(|e| BackupError::Archive(e.to_string()))?;
 
     let mut tar_buf = Vec::new();
     {
@@ -93,56 +107,90 @@ pub fn seal(mut manifest: Manifest, files: &[(&str, &[u8])], recipients: &[Strin
             h.set_mode(0o600);
             h.set_mtime((manifest.created_at / 1000).max(0) as u64);
             h.set_cksum();
-            b.append_data(&mut h, name, data).map_err(|e| BackupError::Archive(e.to_string()))
+            b.append_data(&mut h, name, data)
+                .map_err(|e| BackupError::Archive(e.to_string()))
         };
         add(&mut b, "manifest.json", &manifest_json)?;
         for (name, data) in files {
             add(&mut b, name, data)?;
         }
-        b.finish().map_err(|e| BackupError::Archive(e.to_string()))?;
+        b.finish()
+            .map_err(|e| BackupError::Archive(e.to_string()))?;
     }
-    let compressed = zstd::encode_all(&tar_buf[..], 9).map_err(|e| BackupError::Archive(e.to_string()))?;
+    let compressed =
+        zstd::encode_all(&tar_buf[..], 9).map_err(|e| BackupError::Archive(e.to_string()))?;
 
     let parsed: Vec<age::x25519::Recipient> = recipients
         .iter()
-        .map(|r| r.trim().parse::<age::x25519::Recipient>().map_err(|e| BackupError::Age(format!("bad recipient {r}: {e}"))))
+        .map(|r| {
+            r.trim()
+                .parse::<age::x25519::Recipient>()
+                .map_err(|e| BackupError::Age(format!("bad recipient {r}: {e}")))
+        })
         .collect::<Result<_>>()?;
     if parsed.is_empty() {
         return Err(BackupError::Age("no recipients".into()));
     }
-    let enc = age::Encryptor::with_recipients(parsed.iter().map(|r| r as &dyn age::Recipient)).map_err(|e| BackupError::Age(e.to_string()))?;
+    let enc = age::Encryptor::with_recipients(parsed.iter().map(|r| r as &dyn age::Recipient))
+        .map_err(|e| BackupError::Age(e.to_string()))?;
     let mut out = vec![];
-    let mut w = enc.wrap_output(&mut out).map_err(|e| BackupError::Age(e.to_string()))?;
-    w.write_all(&compressed).map_err(|e| BackupError::Age(e.to_string()))?;
+    let mut w = enc
+        .wrap_output(&mut out)
+        .map_err(|e| BackupError::Age(e.to_string()))?;
+    w.write_all(&compressed)
+        .map_err(|e| BackupError::Age(e.to_string()))?;
     w.finish().map_err(|e| BackupError::Age(e.to_string()))?;
     Ok(out)
 }
 
 /// Decrypts and unpacks an archive in memory, verifying every file against the manifest.
 pub fn open(data: &[u8], identities: &[String]) -> Result<(Manifest, BTreeMap<String, Vec<u8>>)> {
-    let ids: Vec<age::x25519::Identity> =
-        identities.iter().map(|i| i.trim().parse::<age::x25519::Identity>().map_err(|e: &str| BackupError::Age(e.to_string()))).collect::<Result<_>>()?;
+    let ids: Vec<age::x25519::Identity> = identities
+        .iter()
+        .map(|i| {
+            i.trim()
+                .parse::<age::x25519::Identity>()
+                .map_err(|e: &str| BackupError::Age(e.to_string()))
+        })
+        .collect::<Result<_>>()?;
     let dec = age::Decryptor::new_buffered(data).map_err(|e| BackupError::Age(e.to_string()))?;
-    let mut r = dec.decrypt(ids.iter().map(|i| i as &dyn age::Identity)).map_err(|e| BackupError::Age(e.to_string()))?;
+    let mut r = dec
+        .decrypt(ids.iter().map(|i| i as &dyn age::Identity))
+        .map_err(|e| BackupError::Age(e.to_string()))?;
     let mut compressed = vec![];
-    r.read_to_end(&mut compressed).map_err(|e| BackupError::Age(e.to_string()))?;
-    let tar_bytes = zstd::decode_all(&compressed[..]).map_err(|e| BackupError::Archive(e.to_string()))?;
+    r.read_to_end(&mut compressed)
+        .map_err(|e| BackupError::Age(e.to_string()))?;
+    let tar_bytes =
+        zstd::decode_all(&compressed[..]).map_err(|e| BackupError::Archive(e.to_string()))?;
 
     let mut files = BTreeMap::new();
     let mut a = tar::Archive::new(&tar_bytes[..]);
-    for entry in a.entries().map_err(|e| BackupError::Archive(e.to_string()))? {
+    for entry in a
+        .entries()
+        .map_err(|e| BackupError::Archive(e.to_string()))?
+    {
         let mut entry = entry.map_err(|e| BackupError::Archive(e.to_string()))?;
-        let name = entry.path().map_err(|e| BackupError::Archive(e.to_string()))?.to_string_lossy().to_string();
+        let name = entry
+            .path()
+            .map_err(|e| BackupError::Archive(e.to_string()))?
+            .to_string_lossy()
+            .to_string();
         let mut buf = vec![];
-        entry.read_to_end(&mut buf).map_err(|e| BackupError::Archive(e.to_string()))?;
+        entry
+            .read_to_end(&mut buf)
+            .map_err(|e| BackupError::Archive(e.to_string()))?;
         files.insert(name, buf);
     }
-    let manifest: Manifest = serde_json::from_slice(files.get("manifest.json").ok_or(BackupError::NoManifest)?).map_err(|e| BackupError::Archive(e.to_string()))?;
+    let manifest: Manifest =
+        serde_json::from_slice(files.get("manifest.json").ok_or(BackupError::NoManifest)?)
+            .map_err(|e| BackupError::Archive(e.to_string()))?;
     if manifest.format != FORMAT {
         return Err(BackupError::Format(manifest.format));
     }
     for (name, sum) in &manifest.files {
-        let data = files.get(name).ok_or_else(|| BackupError::Checksum(name.clone()))?;
+        let data = files
+            .get(name)
+            .ok_or_else(|| BackupError::Checksum(name.clone()))?;
         if &npw_crypto::sha256_hex(data) != sum {
             return Err(BackupError::Checksum(name.clone()));
         }
@@ -160,7 +208,10 @@ pub fn extract_to(files: &BTreeMap<String, Vec<u8>>, dir: &Path) -> Result<()> {
         }
         let p = dir.join(name);
         if p.exists() {
-            return Err(BackupError::Archive(format!("{} already exists", p.display())));
+            return Err(BackupError::Archive(format!(
+                "{} already exists",
+                p.display()
+            )));
         }
         std::fs::write(&p, data).map_err(|e| BackupError::Archive(e.to_string()))?;
     }
@@ -169,7 +220,10 @@ pub fn extract_to(files: &BTreeMap<String, Vec<u8>>, dir: &Path) -> Result<()> {
 
 /// `backups/nyapassword-20261004T120000Z-s000123.tar.zst.age`
 pub fn object_name(created_at_ms: i64, max_seq: i64) -> String {
-    format!("{PREFIX}nyapassword-{}-s{max_seq:09}.tar.zst.age", utc_stamp(created_at_ms))
+    format!(
+        "{PREFIX}nyapassword-{}-s{max_seq:09}.tar.zst.age",
+        utc_stamp(created_at_ms)
+    )
 }
 
 /// Parses the time back out of an object name (for retention).
@@ -198,7 +252,14 @@ fn civil(secs: i64) -> (i64, i64, i64, i64, i64, i64) {
     let mp = (5 * doy + 2) / 153;
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    (if m <= 2 { y + 1 } else { y }, m, d, rem / 3600, rem % 3600 / 60, rem % 60)
+    (
+        if m <= 2 { y + 1 } else { y },
+        m,
+        d,
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60,
+    )
 }
 
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
@@ -224,11 +285,18 @@ fn parse_stamp(s: &str) -> Option<i64> {
 /// Keeps the newest `recent`, plus the newest backup of each of the last
 /// `daily` days, `weekly` weeks and `monthly` months. Never returns an empty
 /// set when `times` is not empty.
-pub fn retain(times: &[i64], recent: usize, daily: usize, weekly: usize, monthly: usize) -> Vec<i64> {
+pub fn retain(
+    times: &[i64],
+    recent: usize,
+    daily: usize,
+    weekly: usize,
+    monthly: usize,
+) -> Vec<i64> {
     let mut sorted: Vec<i64> = times.to_vec();
     sorted.sort_unstable_by(|a, b| b.cmp(a));
     sorted.dedup();
-    let mut keep: std::collections::BTreeSet<i64> = sorted.iter().take(recent.max(1)).copied().collect();
+    let mut keep: std::collections::BTreeSet<i64> =
+        sorted.iter().take(recent.max(1)).copied().collect();
     let mut bucket = |key: &dyn Fn(i64) -> i64, n: usize| {
         let mut seen = std::collections::BTreeSet::new();
         for &t in &sorted {
@@ -273,7 +341,12 @@ mod tests {
             vaults: [("v".to_string(), 7)].into(),
             files: Default::default(),
         };
-        let data = seal(m.clone(), &[("db.sqlite3", b"db bytes"), ("server.key", b"key")], &[srv_pub, off_pub]).unwrap();
+        let data = seal(
+            m.clone(),
+            &[("db.sqlite3", b"db bytes"), ("server.key", b"key")],
+            &[srv_pub, off_pub],
+        )
+        .unwrap();
         for id in [srv_id, off_id] {
             let (got, files) = open(&data, &[id]).unwrap();
             assert_eq!(got.items, 2);
@@ -289,7 +362,10 @@ mod tests {
         let t = 1_759_579_445_000; // 2025-10-04T12:04:05Z
         assert_eq!(utc_stamp(t), "20251004T120405Z");
         let name = object_name(t, 42);
-        assert_eq!(name, "backups/nyapassword-20251004T120405Z-s000000042.tar.zst.age");
+        assert_eq!(
+            name,
+            "backups/nyapassword-20251004T120405Z-s000000042.tar.zst.age"
+        );
         assert_eq!(object_time(&name), Some(t));
         assert_eq!(utc_stamp(0), "19700101T000000Z");
         assert_eq!(parse_stamp("20240229T235959Z"), Some(1_709_251_199_000));

@@ -47,7 +47,11 @@ pub fn item_key(vault_id: &[u8; 16], item_id: &[u8; 16]) -> Vec<u8> {
 /// Item content, sealed under IK. The format major version is bound too, so a
 /// ciphertext cannot be relabelled as an older format.
 pub fn item_content(vault_id: &[u8; 16], item_id: &[u8; 16], format_major: u16) -> Vec<u8> {
-    build("npw/item/v1", &[vault_id, item_id], &format_major.to_be_bytes())
+    build(
+        "npw/item/v1",
+        &[vault_id, item_id],
+        &format_major.to_be_bytes(),
+    )
 }
 
 /// Attachment chunks, sealed under the attachment's own key.

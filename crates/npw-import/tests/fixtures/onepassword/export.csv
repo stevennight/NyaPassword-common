@@ -1,0 +1,5 @@
+Title,Url,Username,Password,OTPAuth,Favorite,Archived,Tags,Notes,Security Question
+Example Mail,https://mail.example.com,alice@example.com,fake-pass-1,otpauth://totp/Example:alice?secret=JBSWY3DPEHPK3PXP,true,false,Work;Mail,"line 1
+line 2",
+Old Forum,https://forum.example.com,alice,fake-pass-2,,false,true,,,blue
+Shopping List,,,,,false,false,Notes,"milk, eggs",

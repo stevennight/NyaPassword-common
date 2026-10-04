@@ -21,6 +21,8 @@ pub enum TargetKind {
     /// Aliyun OSS.
     Oss,
     Webdav,
+    /// A directory on the server (e.g. a NAS mount); `endpoint` is the path.
+    Fs,
 }
 
 /// A backup destination. Secrets are write-only: responses only say whether one is set.
@@ -34,7 +36,7 @@ pub struct BackupTarget {
     /// the server never prunes this target, bucket lifecycle rules do.
     #[serde(default)]
     pub protect_mode: bool,
-    /// OSS: `https://oss-cn-hangzhou.aliyuncs.com`; WebDAV: the server URL.
+    /// OSS: `https://oss-cn-hangzhou.aliyuncs.com`; WebDAV: the server URL; Fs: an absolute path.
     pub endpoint: String,
     /// OSS only.
     #[serde(default)]
@@ -62,7 +64,12 @@ pub struct Retention {
 
 impl Default for Retention {
     fn default() -> Self {
-        Self { recent: 48, daily: 30, weekly: 12, monthly: 24 }
+        Self {
+            recent: 48,
+            daily: 30,
+            weekly: 12,
+            monthly: 24,
+        }
     }
 }
 

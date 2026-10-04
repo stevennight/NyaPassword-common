@@ -27,7 +27,13 @@ pub fn seal(key: &Key32, plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
 pub fn seal_with_nonce(key: &Key32, nonce: &[u8; 24], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
     let cipher = XChaCha20Poly1305::new(key.as_bytes().into());
     let ct = cipher
-        .encrypt(XNonce::from_slice(nonce), Payload { msg: plaintext, aad })
+        .encrypt(
+            XNonce::from_slice(nonce),
+            Payload {
+                msg: plaintext,
+                aad,
+            },
+        )
         .expect("XChaCha20-Poly1305 encryption cannot fail for in-memory buffers");
     let mut out = Vec::with_capacity(HEADER_LEN + ct.len());
     out.push(VERSION);
@@ -53,7 +59,10 @@ pub fn open(key: &Key32, envelope: &[u8], aad: &[u8]) -> Result<Vec<u8>> {
     cipher
         .decrypt(
             XNonce::from_slice(&envelope[2..HEADER_LEN]),
-            Payload { msg: &envelope[HEADER_LEN..], aad },
+            Payload {
+                msg: &envelope[HEADER_LEN..],
+                aad,
+            },
         )
         .map_err(|_| CryptoError::Decrypt)
 }
@@ -80,11 +89,17 @@ mod tests {
         let env = seal(&k, b"hello", b"aad");
         assert_eq!(open(&k, &env, b"aad").unwrap(), b"hello");
         assert_eq!(open(&k, &env, b"other"), Err(CryptoError::Decrypt));
-        assert_eq!(open(&Key32::generate(), &env, b"aad"), Err(CryptoError::Decrypt));
+        assert_eq!(
+            open(&Key32::generate(), &env, b"aad"),
+            Err(CryptoError::Decrypt)
+        );
         for i in 0..env.len() {
             let mut bad = env.clone();
             bad[i] ^= 1;
-            assert!(open(&k, &bad, b"aad").is_err(), "flipping byte {i} must fail");
+            assert!(
+                open(&k, &bad, b"aad").is_err(),
+                "flipping byte {i} must fail"
+            );
         }
         assert_eq!(open(&k, &env[..10], b"aad"), Err(CryptoError::Malformed));
     }

@@ -1,0 +1,27 @@
+{
+  "name": "npw-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "NyaPassword shared web UI: the vault (web vault, desktop app) and the server's admin console",
+  "scripts": {
+    "dev": "vite",
+    "wasm": "node scripts/build-wasm.mjs",
+    "build": "node scripts/build-wasm.mjs && vite build",
+    "build:desktop": "vite build --mode desktop",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4"
+  }
+}
