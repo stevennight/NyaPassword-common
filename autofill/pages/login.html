@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>登录 · 测试站点</title>
+<style>body{font:15px system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#f4f6fa}form{background:#fff;padding:24px;border-radius:12px;width:320px;display:flex;flex-direction:column;gap:10px}input{padding:9px;border:1px solid #ccd;border-radius:8px}</style>
+</head>
+<body>
+  <!-- A typical Chinese-site login form: labels, no autocomplete attributes. -->
+  <form id="f" action="#" onsubmit="event.preventDefault(); document.getElementById('out').textContent = 'submitted:' + this.account.value;">
+    <h3>示例站点登录</h3>
+    <label>账号 <input name="account" id="account" placeholder="手机号 / 邮箱"></label>
+    <label>密码 <input name="pwd" id="pwd" type="password" placeholder="请输入密码"></label>
+    <label>动态码 <input name="code" id="code" maxlength="6" placeholder="两步验证码"></label>
+    <button id="go" type="submit">登录</button>
+    <div id="out"></div>
+  </form>
+</body>
+</html>

@@ -1,0 +1,655 @@
+{
+  "version": 1,
+  "note": "NyaPassword crypto test vectors v1 (docs/加密规格.md). Binary values are hex. Stream plaintext byte i is (i * 31) % 251. Frozen: never edit, only add a new file.",
+  "kdf": [
+    {
+      "name": "ascii, test parameters (same as npw-core compat v1.0)",
+      "password": "correct horse battery staple",
+      "password_nfkd_hex": "636f727265637420686f727365206261747465727920737461706c65",
+      "secret_key": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "params": {
+        "alg": "argon2id",
+        "m": 64,
+        "t": 1,
+        "p": 1
+      },
+      "k_pw_hex": "667583c3e341405c650e648948720276491a2e428ef63a5eaf33cd66c7a7fb0f",
+      "k_sk_hex": "c65aced9c51912b1974bf495a47fb91e4483643ba3f2572eacb3a2e3a7b2e9ff",
+      "master_hex": "a02f4d1a265852edf245901cec0dbb680d994a792d046d7003806f85601512f0",
+      "auk_hex": "b90c7ceebc796578ef32a962111aa15cb5ff8af374be90b0d478dcb077f5889d",
+      "login_hex": "0bdf3a52d055517db685c1fcdb432a2e0ade37018e2af63edda09d46e5baf4cb"
+    },
+    {
+      "name": "unicode, composed é",
+      "password": "café 密码 🐱",
+      "password_nfkd_hex": "63616665cc8120e5af86e7a08120f09f90b1",
+      "secret_key": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "params": {
+        "alg": "argon2id",
+        "m": 1024,
+        "t": 2,
+        "p": 2
+      },
+      "k_pw_hex": "28a41eb537e6ec86b4a26888f18590f8025163a8e2b68bffb29f5f075be0829d",
+      "k_sk_hex": "c65aced9c51912b1974bf495a47fb91e4483643ba3f2572eacb3a2e3a7b2e9ff",
+      "master_hex": "eefed06cf2fffe3723e99c1d55fa29e646d207934144dcd11e2cfde4fc526b62",
+      "auk_hex": "0287e7f0398dc2bbd953c9ada01bd8ea31f2f7297f8b9603f2a0d7e364b957b3",
+      "login_hex": "d42573002e1a74087ba05e5c73e573cb0676eada11030e11236c077509da7d33"
+    },
+    {
+      "name": "unicode, decomposed e + U+0301 (same keys as the composed form)",
+      "password": "café 密码 🐱",
+      "password_nfkd_hex": "63616665cc8120e5af86e7a08120f09f90b1",
+      "secret_key": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "params": {
+        "alg": "argon2id",
+        "m": 1024,
+        "t": 2,
+        "p": 2
+      },
+      "k_pw_hex": "28a41eb537e6ec86b4a26888f18590f8025163a8e2b68bffb29f5f075be0829d",
+      "k_sk_hex": "c65aced9c51912b1974bf495a47fb91e4483643ba3f2572eacb3a2e3a7b2e9ff",
+      "master_hex": "eefed06cf2fffe3723e99c1d55fa29e646d207934144dcd11e2cfde4fc526b62",
+      "auk_hex": "0287e7f0398dc2bbd953c9ada01bd8ea31f2f7297f8b9603f2a0d7e364b957b3",
+      "login_hex": "d42573002e1a74087ba05e5c73e573cb0676eada11030e11236c077509da7d33"
+    },
+    {
+      "name": "compatibility characters: ligature and full-width letters fold",
+      "password": "ﬁne Ｐａｓｓ",
+      "password_nfkd_hex": "66696e652050617373",
+      "secret_key": "A1-000G40-R40M3-0E209-185GR-38E1W-Z",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "k_pw_hex": "5fc6cfac1d6d439645a13f4c41e93ca182cfb8aadfc991da58901f69143a2b93",
+      "k_sk_hex": "28b5bb70b0fcede849edc878e649310e6786e70e82ab52f74d2f9e4c6eafde1a",
+      "master_hex": "777374dcad91ae7e0c4cf734a7a00dafe5495fa45d62c32d15bf81257a95f589",
+      "auk_hex": "236d76384eaa411eb1cf01fc267b5fbb69ac75c7c000ace23b0abbcda3b48787",
+      "login_hex": "27fd58c3d1e6cc1f20ae6260a4fe587602fc10094c0ffcc8c2776d60058b76c1"
+    },
+    {
+      "name": "leading and trailing spaces are kept",
+      "password": "  pass word  ",
+      "password_nfkd_hex": "20207061737320776f72642020",
+      "secret_key": "A1-000G40-R40M3-0E209-185GR-38E1W-Z",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "k_pw_hex": "122c38d69f8263714b56576657a469fb4aedda012826fedea0a2cf7b8b8d6f62",
+      "k_sk_hex": "28b5bb70b0fcede849edc878e649310e6786e70e82ab52f74d2f9e4c6eafde1a",
+      "master_hex": "3a9983a62f7e8e9902bb9f1eb1ed58f52d6b3d0faa8dac29ed8d5137e522b178",
+      "auk_hex": "8a375799b24ce2383a5e2ee8fd27b5102cb25059869130b7a3c7fcabd8c20ee6",
+      "login_hex": "439905049239d8e74e0cf5fbe0042b833e3b9a82d4993732bd65b1806d867f2d"
+    },
+    {
+      "name": "empty password, 32-byte salt",
+      "password": "",
+      "password_nfkd_hex": "",
+      "secret_key": "A1-000G40-R40M3-0E209-185GR-38E1W-Z",
+      "account_salt_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "k_pw_hex": "f786798db946d5690d6df49055d1a7d8696cc576e39514b398a053a462fbe5fb",
+      "k_sk_hex": "12150b0f0dc3b544df507d38ebc22f41322414d415da8674ac839b167dc768c8",
+      "master_hex": "e5937282b485602dd23d89a8be1388995b48d1a2f64f92c73423c8b21f3c8d33",
+      "auk_hex": "79aba80be463abb824cf097b4c10c12d5ee633ec5589034fd2d13455ec210fc8",
+      "login_hex": "b3886af576b51671b2b9993adc0bd9b99fa76a05b37a61b498bb0ef123e06e4a"
+    },
+    {
+      "name": "default parameters (64 MiB, t=3, p=4)",
+      "password": "correct horse battery staple",
+      "password_nfkd_hex": "636f727265637420686f727365206261747465727920737461706c65",
+      "secret_key": "A1-000G40-R40M3-0E209-185GR-38E1W-Z",
+      "account_salt_hex": "000102030405060708090a0b0c0d0e0f",
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 3,
+        "p": 4
+      },
+      "k_pw_hex": "853b272a44db1421c02962669a55eb0994f3cab385ed1c4c79253eee19bab49e",
+      "k_sk_hex": "a1fc42cfb3b1e60d2ff52a2a56c55ec91ff481b24de9ea63c8df7a3a7a3ded4d",
+      "master_hex": "24c765e5f76af22cefdc484ccc90b5c08b074b01c804f62fb1fa44d4638759d3",
+      "auk_hex": "41a1af00f2947d1376d3ade85e372597e1cca0b5ea622d0eafa59cd88944ca9e",
+      "login_hex": "cd9cb3a9f6984faf6d42fdf6cd2606ce00bf5e3f855ed19e351b124879622585"
+    }
+  ],
+  "recovery": [
+    {
+      "code_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+      "account_salt_hex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+      "auk_hex": "372668c96f1efc002f7ff5527bf4e14e7f1c0fe30fc1963abae8e06fcd5d85aa",
+      "login_hex": "77fb392d8b9a984ac41294b39248cdfc84ab1fcab634cf4ee32072c12672a960"
+    },
+    {
+      "code_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "account_salt_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+      "auk_hex": "e180c70ba129cb176d6596e7bdc08168454840a4d1dc478dab197f827fe5a5cd",
+      "login_hex": "5b6d6a0ce6a753bd733f3403d1cc39c20becf9425891cd8eb86032e4daefe90e"
+    }
+  ],
+  "kdf_params": [
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 3,
+        "p": 4
+      },
+      "valid": true
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 16384,
+        "t": 1,
+        "p": 1
+      },
+      "valid": true
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 16383,
+        "t": 1,
+        "p": 1
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 1048576,
+        "t": 64,
+        "p": 16
+      },
+      "valid": true
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 1048577,
+        "t": 3,
+        "p": 4
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 0,
+        "p": 4
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 65,
+        "p": 4
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 3,
+        "p": 0
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 65536,
+        "t": 3,
+        "p": 17
+      },
+      "valid": false
+    },
+    {
+      "params": {
+        "alg": "argon2id",
+        "m": 64,
+        "t": 1,
+        "p": 1
+      },
+      "valid": false
+    }
+  ],
+  "secret_key": [
+    {
+      "raw_hex": "00000000000000000000000000000000",
+      "text": "A1-000000-00000-00000-00000-00000-3",
+      "check_char": "3",
+      "also_accepted": [
+        "a1-000000-00000-00000-00000-00000-3",
+        "A1 000000 00000 00000 00000 00000 3",
+        "A1000000000000000000000000003",
+        "  a1000000000000000000000000003\n",
+        "A1-OOOOOO-OOOOO-OOOOO-OOOOO-OOOOO-3"
+      ]
+    },
+    {
+      "raw_hex": "ffffffffffffffffffffffffffffffff",
+      "text": "A1-ZZZZZZ-ZZZZZ-ZZZZZ-ZZZZZ-ZZZZW-K",
+      "check_char": "K",
+      "also_accepted": [
+        "a1-zzzzzz-zzzzz-zzzzz-zzzzz-zzzzw-k",
+        "A1 ZZZZZZ ZZZZZ ZZZZZ ZZZZZ ZZZZW K",
+        "A1ZZZZZZZZZZZZZZZZZZZZZZZZZWK",
+        "  a1zzzzzzzzzzzzzzzzzzzzzzzzzwk\n"
+      ]
+    },
+    {
+      "raw_hex": "4e796150617373776f72642d534b2d31",
+      "text": "A1-9SWP2M-31EDS-QEVVJ-CGPN6-JSD64-7",
+      "check_char": "7",
+      "also_accepted": [
+        "a1-9swp2m-31eds-qevvj-cgpn6-jsd64-7",
+        "A1 9SWP2M 31EDS QEVVJ CGPN6 JSD64 7",
+        "A19SWP2M31EDSQEVVJCGPN6JSD647",
+        "  a19swp2m31edsqevvjcgpn6jsd647\n",
+        "A1-9SWP2M-3IEDS-QEVVJ-CGPN6-JSD64-7"
+      ]
+    },
+    {
+      "raw_hex": "000102030405060708090a0b0c0d0e0f",
+      "text": "A1-000G40-R40M3-0E209-185GR-38E1W-Z",
+      "check_char": "Z",
+      "also_accepted": [
+        "a1-000g40-r40m3-0e209-185gr-38e1w-z",
+        "A1 000G40 R40M3 0E209 185GR 38E1W Z",
+        "A1000G40R40M30E209185GR38E1WZ",
+        "  a1000g40r40m30e209185gr38e1wz\n",
+        "A1-OOOG4O-R4OM3-OE2O9-I85GR-38ElW-Z"
+      ]
+    },
+    {
+      "raw_hex": "a35f0c9e71d24b88e6103fd25c7a91b4",
+      "text": "A1-MDFGS7-KHT95-RHSGG-7Z95R-YMHPG-F",
+      "check_char": "F",
+      "also_accepted": [
+        "a1-mdfgs7-kht95-rhsgg-7z95r-ymhpg-f",
+        "A1 MDFGS7 KHT95 RHSGG 7Z95R YMHPG F",
+        "A1MDFGS7KHT95RHSGG7Z95RYMHPGF",
+        "  a1mdfgs7kht95rhsgg7z95rymhpgf\n"
+      ]
+    }
+  ],
+  "secret_key_invalid": [
+    {
+      "name": "wrong check character",
+      "text": "A1-000000-00000-00000-00000-00000-Z",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "wrong prefix",
+      "text": "B1-000000-00000-00000-00000-00000-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "no prefix",
+      "text": "000000-00000-00000-00000-00000-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "one character missing",
+      "text": "A1-00000-00000-00000-00000-00000-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "one character too many",
+      "text": "A1-0000000-00000-00000-00000-00000-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "U is not in the alphabet",
+      "text": "A1-0U0000-00000-00000-00000-00000-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "non-zero padding bits",
+      "text": "A1-000000-00000-00000-00000-00001-3",
+      "error": "invalid_secret_key"
+    },
+    {
+      "name": "empty",
+      "text": "",
+      "error": "invalid_secret_key"
+    }
+  ],
+  "aad": [
+    {
+      "function": "account_key",
+      "label": "npw/account-key/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000001"
+      ],
+      "hex": "6e70772f6163636f756e742d6b65792f76310192f0c0000070008000000000000001"
+    },
+    {
+      "function": "account_private_key",
+      "label": "npw/account-x25519/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000001"
+      ],
+      "hex": "6e70772f6163636f756e742d7832353531392f76310192f0c0000070008000000000000001"
+    },
+    {
+      "function": "recovery_account_key",
+      "label": "npw/recovery-account-key/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000001"
+      ],
+      "hex": "6e70772f7265636f766572792d6163636f756e742d6b65792f76310192f0c0000070008000000000000001"
+    },
+    {
+      "function": "vault_key",
+      "label": "npw/vault-key/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000002"
+      ],
+      "hex": "6e70772f7661756c742d6b65792f76310192f0c0000070008000000000000002"
+    },
+    {
+      "function": "vault_meta",
+      "label": "npw/vault-meta/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000002"
+      ],
+      "hex": "6e70772f7661756c742d6d6574612f76310192f0c0000070008000000000000002"
+    },
+    {
+      "function": "item_key",
+      "label": "npw/item-key/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000002",
+        "0192f0c0-0000-7000-8000-000000000064"
+      ],
+      "hex": "6e70772f6974656d2d6b65792f76310192f0c00000700080000000000000020192f0c0000070008000000000000064"
+    },
+    {
+      "function": "item_content",
+      "label": "npw/item/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000002",
+        "0192f0c0-0000-7000-8000-000000000064"
+      ],
+      "format_major": 1,
+      "hex": "6e70772f6974656d2f76310192f0c00000700080000000000000020192f0c00000700080000000000000640001"
+    },
+    {
+      "function": "item_content",
+      "label": "npw/item/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000002",
+        "0192f0c0-0000-7000-8000-000000000064"
+      ],
+      "format_major": 2,
+      "hex": "6e70772f6974656d2f76310192f0c00000700080000000000000020192f0c00000700080000000000000640002"
+    },
+    {
+      "function": "attachment",
+      "label": "npw/attachment/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-0000000000a1"
+      ],
+      "hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1"
+    },
+    {
+      "function": "device_secret",
+      "label": "npw/device-secret/v1/",
+      "name": "secret_key",
+      "hex": "6e70772f6465766963652d7365637265742f76312f7365637265745f6b6579"
+    },
+    {
+      "function": "device_secret",
+      "label": "npw/device-secret/v1/",
+      "name": "session",
+      "hex": "6e70772f6465766963652d7365637265742f76312f73657373696f6e"
+    },
+    {
+      "function": "quick_unlock",
+      "label": "npw/quick-unlock/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000001"
+      ],
+      "hex": "6e70772f717569636b2d756e6c6f636b2f76310192f0c0000070008000000000000001"
+    },
+    {
+      "function": "export",
+      "label": "npw/export/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-0000000000e1"
+      ],
+      "hex": "6e70772f6578706f72742f76310192f0c00000700080000000000000e1"
+    }
+  ],
+  "envelope": [
+    {
+      "name": "empty plaintext, empty AAD",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce_hex": "404142434445464748494a4b4c4d4e4f5051525354555657",
+      "aad_hex": "",
+      "plaintext_hex": "",
+      "envelope_hex": "0101404142434445464748494a4b4c4d4e4f505152535455565761d8489bd58cfbe3ec6d5913671c3779"
+    },
+    {
+      "name": "short message with AAD",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce_hex": "010101010101010101010101010101010101010101010101",
+      "aad_hex": "6e70772f74657374",
+      "plaintext_hex": "68656c6c6f",
+      "envelope_hex": "0101010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1"
+    },
+    {
+      "name": "AK wrapped under AUK (= npw-core compat v1.0 encrypted_account_key)",
+      "key_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+      "nonce_hex": "010101010101010101010101010101010101010101010101",
+      "aad_hex": "6e70772f6163636f756e742d6b65792f76310192f0c0000070008000000000000001",
+      "plaintext_hex": "0202020202020202020202020202020202020202020202020202020202020202",
+      "envelope_hex": "0101010101010101010101010101010101010101010101010101bf5487d64538079ab984d1f51fd5cc836235a86dd80469cbc1344a499bab2ddc561db8911f837df874b2fc9d3f359d97"
+    },
+    {
+      "name": "IK wrapped under VK",
+      "key_hex": "0303030303030303030303030303030303030303030303030303030303030303",
+      "nonce_hex": "141414141414141414141414141414141414141414141414",
+      "aad_hex": "6e70772f6974656d2d6b65792f76310192f0c00000700080000000000000020192f0c0000070008000000000000064",
+      "plaintext_hex": "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+      "envelope_hex": "0101141414141414141414141414141414141414141414141414e3365b2ed9ded26a559a33e32b670ab3d81340b8d9816e2da55d1c5c281968928abfed4e6b172e2509fc4ba6682eeb58"
+    },
+    {
+      "name": "item content JSON under IK",
+      "key_hex": "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+      "nonce_hex": "646464646464646464646464646464646464646464646464",
+      "aad_hex": "6e70772f6974656d2f76310192f0c00000700080000000000000020192f0c00000700080000000000000640001",
+      "plaintext_hex": "7b22666f726d6174223a22312e30222c2274656d706c617465223a2270617373776f7264222c227469746c65223a22e7a4bae4be8b222c226669656c6473223a5b7b226964223a2270617373776f7264222c226c6162656c223a22e5af86e7a081222c226b696e64223a22636f6e6365616c6564222c22707572706f7365223a2270617373776f7264222c2276616c7565223a2270c3a4737377c3b67264227d5d7d",
+      "envelope_hex": "01016464646464646464646464646464646464646464646464646fbcb2efae79a2bcf1a4726867d974d9515375ac727bde5283f13ccf3ec5386f1d4c8ab088cf8ff1781177b8142fc91570e4dbdd53aabd806f640e2b0f4dacb3a8f7c9160431096e61928ebf2dd33d3c6437264e15d8ed6b81addf3d9bc464a039b84c8cf6289868e38f964346aea7728af96698ae0fe3e174a8497b8e4d943540014a9d68137571807db9b6801310ec0f4d4d37351e4de5737f7f420b83538f91d2b0697a49d223eb3042050455de459c4b"
+    },
+    {
+      "name": "300 bytes (several ChaCha20 blocks)",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce_hex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7",
+      "aad_hex": "",
+      "plaintext_hex": "001f3e5d7c9bbad9f81c3b5a7998b7d6f51938577695b4d3f21635547392b1d0ef133251708faecdec102f4e6d8cabcae90d2c4b6a89a8c7e60a29486786a5c4e30726456483a2c1e004234261809fbedd01203f5e7d9cbbdaf91d3c5b7a99b8d7f61a39587796b5d4f31736557493b2d1f01433527190afceed11304f6e8daccbea0e2d4c6b8aa9c8e70b2a496887a6c5e40827466584a3c2e10524436281a0bfde0221405f7e9dbcdbfa1e3d5c7b9ab9d8f71b3a597897b6d5f41837567594b3d2f11534537291b0cfee1231506f8eadcceb0f2e4d6c8baac9e80c2b4a6988a7c6e50928476685a4c3e20625446382a1c0df032241607f9ebddc001f3e5d7c9bbad9f81c3b5a7998b7d6f51938577695b4d3f21635547392b1d0ef133251708faecdec102f4e6d8cabcae9",
+      "envelope_hex": "0101a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b745f33440cbc61e75997316d308a81416ceb3a77bdc937e0aef56beb394314fe63e94987e36c9d20149fb4118f6b804e44c2b0ab2b0e178601cbd28a24ea7d7478575c039c868cafc7968692e19dda3c11166fa77487f27b9850a3b3bcc248f88dda4b45d813a4dfca8a2c4f945f0b71a48e9982ed29c07361c297b38ac6dff5f95c16d5790c49996fbde56bcdbba4a5dac0c8bac20f72e76efa2be517e66520e7660438865c0b17c97e46f9ee636bbecf3a85f6809209dc24149a158d37b98c0cebcef7a961fd918473ddf8e85551b2a4fc0b1d1c4114c1b87491e02eefda872193a7d81f8e5ef4df0e18399e1a6d86b05560edd98f510be6da5585383d350c5914392c9119ce93a72b1a3fc3b0706139e9e687296db866c2e47adf46b9f2a5ab8eb2391d6ddd4d8e0791973856a3fb8687d33b628de4660920956cf"
+    }
+  ],
+  "envelope_invalid": [
+    {
+      "name": "version byte 2",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0201010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "unsupported_version(2)"
+    },
+    {
+      "name": "version byte 0",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0001010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "unsupported_version(0)"
+    },
+    {
+      "name": "algorithm 2 (the attachment stream id) is not an envelope algorithm",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0102010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "unsupported_algorithm(2)"
+    },
+    {
+      "name": "shorter than header + tag",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0101010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd80",
+      "error": "malformed"
+    },
+    {
+      "name": "last tag byte flipped",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0101010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd0",
+      "error": "decrypt"
+    },
+    {
+      "name": "nonce byte flipped",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0101810101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "decrypt"
+    },
+    {
+      "name": "wrong AAD",
+      "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "aad_hex": "6e70772f7465737432",
+      "data_hex": "0101010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "decrypt"
+    },
+    {
+      "name": "wrong key",
+      "key_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "aad_hex": "6e70772f74657374",
+      "data_hex": "0101010101010101010101010101010101010101010101010101c1847b6413725fb42a8adfbed6fd801cc582d26fd1",
+      "error": "decrypt"
+    }
+  ],
+  "stream": [
+    {
+      "name": "empty file: one empty chunk",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce_prefix_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "plaintext_len": 0,
+      "ciphertext_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d278cd8d3a97940aaeffe5e6fb4c4f1890",
+      "ciphertext_sha256": "c596ab0c271240ad855a348ab1a7fe90def03e2288e5b71d2327699a1ca9e3fd",
+      "encrypted_len": 37
+    },
+    {
+      "name": "100 bytes: one short chunk",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce_prefix_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "plaintext_len": 100,
+      "ciphertext_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2826db6fe12f1a989657b87b09947acea65fbdcb278e5621d15abe4163655cbc46103104e18d436763582554f424d7a8de119b4354517e0f973456f11e858e74ec1adc5d72287fcf5784be2fc17346209bc02c2bfc70583c84d533232e4cdd431815ce5392a14e1c71ae3b5537e603033863d9178",
+      "ciphertext_sha256": "d004acdc974c5175d026666575bcae5721cb5e5602749726948a189e0a214d27",
+      "encrypted_len": 137
+    },
+    {
+      "name": "exactly 1 MiB: one full chunk, no empty chunk after it",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce_prefix_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "plaintext_len": 1048576,
+      "ciphertext_sha256": "aa2b67c24bbe1a223ce8ae81b672dc7e108cb0317a0ca8c7d6c1b55b979ecf09",
+      "encrypted_len": 1048613
+    },
+    {
+      "name": "1 MiB + 5: a full chunk and a 5-byte last chunk",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce_prefix_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "plaintext_len": 1048581,
+      "ciphertext_sha256": "8efaa5dd96a7b941e4d308417732817de8b4afb0b52faa2425fdc66d3028ec42",
+      "encrypted_len": 1048634
+    },
+    {
+      "name": "exactly 2 MiB: two full chunks",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "nonce_prefix_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "plaintext_len": 2097152,
+      "ciphertext_sha256": "bc7692d91262cb0723cef2c4992464d3e86bfd1ac2715ecc5da53c41d55f4f8e",
+      "encrypted_len": 2097205
+    }
+  ],
+  "stream_invalid": [
+    {
+      "name": "version byte 2",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0202c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2826db6fe12f1a989657b87b09947acea65fbdcb278e5621d15abe4163655cbc46103104e18d436763582554f424d7a8de119b4354517e0f973456f11e858e74ec1adc5d72287fcf5784be2fc17346209bc02c2bfc70583c84d533232e4cdd431815ce5392a14e1c71ae3b5537e603033863d9178",
+      "error": "unsupported_version(2)"
+    },
+    {
+      "name": "algorithm 1 (the envelope id)",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0101c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2826db6fe12f1a989657b87b09947acea65fbdcb278e5621d15abe4163655cbc46103104e18d436763582554f424d7a8de119b4354517e0f973456f11e858e74ec1adc5d72287fcf5784be2fc17346209bc02c2bfc70583c84d533232e4cdd431815ce5392a14e1c71ae3b5537e603033863d9178",
+      "error": "unsupported_algorithm(1)"
+    },
+    {
+      "name": "shorter than header + tag",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2826db6fe12f1a989657b87b09947ac",
+      "error": "malformed"
+    },
+    {
+      "name": "truncated: the only chunk was sealed as not-last",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2e610ed9432bdeb81866898f5109ab4375df928db53deaba8e5f5776b32627588bb9ac8b28568cc48a4ca2e924cff8c210cea8caa48fd10e9c6b79acba6f15e9d70ce6893dff3b974fa69e21414a7cb2eaf6efc30cfa78042ad230ddcd1f8ec78198e57a2816e9b3622e2e18b6fffdfd9d78fe48e",
+      "error": "decrypt"
+    },
+    {
+      "name": "reordered: the first chunk carries counter 1",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2b05a58967b5303a17bf4466b2b9b7f0e69faf2542f4a857d08b2bfb5fda5db4e04bdab875b0a16f706e96d18e246407ee37ba2e057dbcbd9e1e6844af4df76d1d8091d1121a263aea26210aa8b9daeb098da6f4808d2be4b244fb562b6e981f0ab12491de3a694bd670af96a93707c7e6a7aae82",
+      "error": "decrypt"
+    },
+    {
+      "name": "chunk byte flipped",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000a1",
+      "data_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2836db6fe12f1a989657b87b09947acea65fbdcb278e5621d15abe4163655cbc46103104e18d436763582554f424d7a8de119b4354517e0f973456f11e858e74ec1adc5d72287fcf5784be2fc17346209bc02c2bfc70583c84d533232e4cdd431815ce5392a14e1c71ae3b5537e603033863d9178",
+      "error": "decrypt"
+    },
+    {
+      "name": "other attachment id",
+      "key_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "aad_hex": "6e70772f6174746163686d656e742f76310192f0c00000700080000000000000e1",
+      "data_hex": "0102c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2826db6fe12f1a989657b87b09947acea65fbdcb278e5621d15abe4163655cbc46103104e18d436763582554f424d7a8de119b4354517e0f973456f11e858e74ec1adc5d72287fcf5784be2fc17346209bc02c2bfc70583c84d533232e4cdd431815ce5392a14e1c71ae3b5537e603033863d9178",
+      "error": "decrypt"
+    }
+  ]
+}
