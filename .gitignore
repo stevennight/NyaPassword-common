@@ -1,0 +1,9 @@
+/target
+node_modules/
+/web/dist/
+/web/.svelte-kit/
+/web/pkg/
+*.log
+.DS_Store
+.idea/
+.vscode/

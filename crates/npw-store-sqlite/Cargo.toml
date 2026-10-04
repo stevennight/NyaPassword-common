@@ -1,0 +1,12 @@
+[package]
+name = "npw-store-sqlite"
+description = "NyaPassword local replica in SQLite (desktop, Android, CLI)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+npw-core.workspace = true
+serde_json.workspace = true
+rusqlite = { version = "0.40", features = ["bundled"] }

@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/npw-crypto",
+    "crates/npw-model",
+    "crates/npw-api",
+    "crates/npw-match",
+    "crates/npw-otp",
+    "crates/npw-core",
+    "crates/npw-store-sqlite",
+    "crates/npw-passkey",
+    "crates/npw-ssh",
+    "crates/npw-import",
+    "crates/npw-export",
+    "crates/npw-backup",
+    "crates/npw-wasm",
+    "crates/npw-ffi",
+    "tools/npw-dev",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+rust-version = "1.85"
+
+[workspace.dependencies]
+npw-crypto = { path = "crates/npw-crypto" }
+npw-model = { path = "crates/npw-model" }
+npw-api = { path = "crates/npw-api" }
+npw-match = { path = "crates/npw-match" }
+npw-otp = { path = "crates/npw-otp" }
+npw-core = { path = "crates/npw-core" }
+npw-store-sqlite = { path = "crates/npw-store-sqlite" }
+npw-passkey = { path = "crates/npw-passkey" }
+npw-ssh = { path = "crates/npw-ssh" }
+npw-import = { path = "crates/npw-import" }
+npw-export = { path = "crates/npw-export" }
+npw-backup = { path = "crates/npw-backup" }
+
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+base64 = "0.22"
+hex = "0.4"
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+tracing = "0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+
+# Cryptography: the RustCrypto 0.10 generation, one dependency tree with opaque-ke 3.
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+hkdf = "0.12"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+chacha20poly1305 = "0.10"
+x25519-dalek = { version = "2", features = ["static_secrets", "zeroize"] }
+ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8", "zeroize"] }
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+rand = "0.8"
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = "0.2"
+zeroize = { version = "1", features = ["derive"] }
+opaque-ke = { version = "3", features = ["argon2"] }
+subtle = "2"
+unicode-normalization = "0.1"
+
+[profile.release]
+lto = "thin"
+debug = "line-tables-only"
+
+# Argon2 and the AEAD are unusably slow unoptimized; keep tests fast.
+[profile.dev.package."*"]
+opt-level = 2
+[profile.test.package."*"]
+opt-level = 2

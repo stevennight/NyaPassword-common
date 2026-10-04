@@ -1,0 +1,38 @@
+[package]
+name = "npw-core"
+description = "NyaPassword client core: account, unlock, vault, sync and merge, search, generator, health check"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["http"]
+# The reqwest transport (native and wasm32). Without it, hosts supply their own `Transport`.
+http = ["dep:reqwest"]
+
+[dependencies]
+npw-crypto.workspace = true
+npw-model.workspace = true
+npw-api.workspace = true
+npw-match.workspace = true
+npw-otp.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+async-trait = "0.1"
+async-lock = "3"
+pinyin = "0.11"
+rand.workspace = true
+tracing.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+reqwest = { version = "0.12", default-features = false, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

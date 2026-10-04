@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NyaPassword 原型</title>
+<style>
+:root{
+  --bg:#eef0f4; --surface:#ffffff; --surface-2:#f6f7f9; --surface-3:#eceef2;
+  --border:#dfe2e8; --text:#1c2230; --text-2:#5b6475; --text-3:#8a92a3;
+  --accent:#3d63f5; --accent-2:#e9eeff; --accent-text:#ffffff;
+  --ok:#1f9d55; --ok-bg:#e5f6ec; --warn:#c77700; --warn-bg:#fff4dd; --bad:#d64545; --bad-bg:#fde9e9;
+  --sidebar:#f3f4f7; --sel:#e3e9ff; --shadow:0 10px 30px rgba(20,30,60,.12);
+  --mono:"Cascadia Mono",Consolas,"SFMono-Regular",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1218; --surface:#181c24; --surface-2:#1e232d; --surface-3:#262c38;
+    --border:#2c3341; --text:#e6e9ef; --text-2:#a3abbb; --text-3:#717a8c;
+    --accent:#6d8cff; --accent-2:#232c4a; --accent-text:#0f1218;
+    --ok:#4cc38a; --ok-bg:#16301f; --warn:#f0b04a; --warn-bg:#33270f; --bad:#ff7676; --bad-bg:#3a1a1a;
+    --sidebar:#14181f; --sel:#263159; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1218; --surface:#181c24; --surface-2:#1e232d; --surface-3:#262c38;
+  --border:#2c3341; --text:#e6e9ef; --text-2:#a3abbb; --text-3:#717a8c;
+  --accent:#6d8cff; --accent-2:#232c4a; --accent-text:#0f1218;
+  --ok:#4cc38a; --ok-bg:#16301f; --warn:#f0b04a; --warn-bg:#33270f; --bad:#ff7676; --bad-bg:#3a1a1a;
+  --sidebar:#14181f; --sel:#263159; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI","Microsoft YaHei UI","PingFang SC",system-ui,sans-serif;}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+.mono{font-family:var(--mono)}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:10px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.tab{border:0;background:transparent;padding:6px 12px;border-radius:8px;color:var(--text-2)}
+.tab:hover{background:var(--surface-3)}
+.tab.on{background:var(--accent-2);color:var(--accent);font-weight:600}
+.themebtn{border:1px solid var(--border);background:var(--surface-2);border-radius:8px;padding:5px 10px;color:var(--text-2)}
+.page{display:none;padding:24px 16px 48px;max-width:1320px;margin:0 auto}
+.page.on{display:block}
+.page h2{margin:0 0 4px;font-size:20px}
+.page .lead{margin:0 0 18px;color:var(--text-2)}
+.note{font-size:12.5px;color:var(--text-2);background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-top:14px}
+.note b{color:var(--text)}
+
+/* window frame */
+.win{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.win-title{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 0 0 12px;background:var(--sidebar);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2)}
+.win-ctl{display:flex}.win-ctl span{width:44px;height:34px;display:grid;place-items:center;color:var(--text-3)}
+.scroll-x{overflow-x:auto}
+
+/* desktop app */
+.app{display:grid;grid-template-columns:220px 320px 1fr;height:680px;min-width:980px}
+.side{background:var(--sidebar);border-right:1px solid var(--border);padding:12px 10px;overflow:auto}
+.acct{display:flex;align-items:center;gap:8px;padding:6px 8px 12px}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7b8cff,#3d63f5);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+.side h4{margin:14px 8px 4px;font-size:11px;letter-spacing:.06em;color:var(--text-3);font-weight:600}
+.nav{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;padding:6px 8px;border-radius:7px;text-align:left;color:var(--text)}
+.nav:hover{background:var(--surface-3)}
+.nav.on{background:var(--sel);color:var(--accent);font-weight:600}
+.nav .cnt{margin-left:auto;font-size:12px;color:var(--text-3)}
+.nav .dot{width:8px;height:8px;border-radius:3px}
+.list{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0}
+.search{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.search input{flex:1;min-width:0;border:1px solid var(--border);background:var(--surface-2);border-radius:8px;padding:7px 10px;outline:none}
+.search input:focus{border-color:var(--accent)}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 12px}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.sm{padding:3px 9px;font-size:12.5px}
+.items{overflow:auto;flex:1}
+.item{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+.item:hover{background:var(--surface-2)}
+.item.on{background:var(--sel)}
+.ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;flex:none}
+.item .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .badge{margin-left:auto}
+.badge{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--surface-3);color:var(--text-2);white-space:nowrap}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.bad{background:var(--bad-bg);color:var(--bad)}
+.badge.acc{background:var(--accent-2);color:var(--accent)}
+.detail{overflow:auto;padding:22px 28px;min-width:0}
+.dhead{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.dhead .ico{width:52px;height:52px;border-radius:13px;font-size:22px}
+.dhead h3{margin:0;font-size:20px}
+.dhead .sub{color:var(--text-2);font-size:13px}
+.dhead .acts{margin-left:auto;display:flex;gap:6px}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;margin-bottom:14px;background:var(--warn-bg);color:var(--text);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+.banner b{color:var(--warn)}
+.card{border:1px solid var(--border);border-radius:11px;background:var(--surface);margin-bottom:14px;overflow:hidden}
+.card .sec{padding:7px 14px;font-size:11.5px;font-weight:600;color:var(--text-3);background:var(--surface-2);border-bottom:1px solid var(--border);letter-spacing:.04em}
+.field{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 14px;border-bottom:1px solid var(--border);align-items:center}
+.field:last-child{border-bottom:0}
+.field:hover{background:var(--surface-2)}
+.field .lab{font-size:12px;color:var(--text-2);grid-column:1}
+.field .val{grid-column:1;word-break:break-all}
+.field .tools{grid-row:1/3;grid-column:2;display:flex;gap:4px;opacity:.25;transition:opacity .15s}
+.field:hover .tools{opacity:1}
+.ib{border:0;background:transparent;border-radius:6px;padding:4px 7px;color:var(--text-2);font-size:12.5px}
+.ib:hover{background:var(--surface-3);color:var(--accent)}
+.totp{display:flex;align-items:center;gap:10px}
+.totp .code{font-family:var(--mono);font-size:20px;letter-spacing:.08em;color:var(--accent)}
+.ring{width:22px;height:22px}
+.meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface-3);color:var(--text-2);margin:0 4px 4px 0}
+.pw-strength{height:4px;border-radius:2px;background:var(--surface-3);margin-top:5px;overflow:hidden;width:180px}
+.pw-strength i{display:block;height:100%;background:var(--ok);width:92%}
+
+/* lock */
+.lock{height:560px;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,var(--accent-2),var(--surface) 60%)}
+.lockbox{width:340px;text-align:center}
+.lockbox .logo{margin:0 auto 12px}
+.lockbox h3{margin:0 0 4px}
+.lockbox p{margin:0 0 18px;color:var(--text-2);font-size:13px}
+.pw{display:flex;border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden}
+.pw input{flex:1;border:0;padding:11px 12px;outline:none;background:transparent}
+.pw button{border:0;background:var(--accent);color:var(--accent-text);padding:0 16px;font-weight:600}
+.hello{margin-top:14px;width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;gap:8px}
+.small{font-size:12px;color:var(--text-3);margin-top:16px}
+
+/* browser */
+.browser{min-width:980px}
+.bbar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--sidebar);border-bottom:1px solid var(--border)}
+.url{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:13px;color:var(--text-2)}
+.url b{color:var(--text);font-weight:500}
+.extbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;position:relative}
+.extbtn .n{position:absolute;right:-4px;bottom:-4px;background:var(--accent);color:var(--accent-text);font-size:10px;border-radius:999px;padding:0 4px;line-height:14px}
+.site{position:relative;height:560px;background:linear-gradient(180deg,#f8fafc,#eef2f7);display:grid;place-items:center;color:#1c2230}
+:root[data-theme="dark"] .site{background:linear-gradient(180deg,#e9edf3,#dfe5ee)}
+.login{width:360px;background:#fff;border-radius:14px;padding:26px;box-shadow:0 8px 30px rgba(20,30,60,.12)}
+.login h3{margin:0 0 16px;text-align:center}
+.login label{display:block;font-size:12.5px;color:#5b6475;margin:10px 0 4px}
+.login input{width:100%;border:1px solid #d5dae3;border-radius:8px;padding:9px 34px 9px 10px;background:#fff;color:#1c2230;outline:none}
+.login input:focus{border-color:#3d63f5;box-shadow:0 0 0 3px rgba(61,99,245,.15)}
+.login .inwrap{position:relative}
+.login .inwrap .k{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:20px;height:20px;cursor:pointer}
+.login .go{width:100%;margin-top:18px;background:#24292f;color:#fff;border:0;border-radius:8px;padding:10px;font-weight:600}
+.login .pk{width:100%;margin-top:8px;background:#fff;border:1px solid #d5dae3;color:#1c2230;border-radius:8px;padding:9px}
+.inline{position:absolute;width:320px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;z-index:5}
+.inline.on{display:block}
+.inline .h{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-3);padding:4px 8px 6px}
+.inline .opt{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
+.inline .opt:hover{background:var(--sel)}
+.inline .opt .ico{width:28px;height:28px;font-size:12px;border-radius:7px}
+.inline .opt .s{font-size:12px;color:var(--text-2)}
+.inline .foot{border-top:1px solid var(--border);margin-top:4px;padding:6px 8px 2px;font-size:12px;color:var(--accent);display:flex;justify-content:space-between}
+.popup{position:absolute;right:10px;top:6px;width:340px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;display:none;z-index:6}
+.popup.on{display:block}
+.popup .ph{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.popup .ph input{flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 9px;background:var(--surface-2);outline:none;min-width:0}
+.popup .grp{font-size:11.5px;color:var(--text-3);padding:8px 12px 2px;font-weight:600}
+.popup .item{border-bottom:0}
+.popup .pf{display:flex;justify-content:space-around;border-top:1px solid var(--border);padding:6px}
+.popup .pf button{border:0;background:transparent;font-size:12px;color:var(--text-2);padding:6px;border-radius:7px}
+.popup .pf button:hover{background:var(--surface-3)}
+.savebar{position:absolute;right:10px;top:6px;width:340px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:14px;display:none;z-index:6}
+.savebar.on{display:block}
+
+/* android */
+.phones{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+.phonecol{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phonecol .cap{font-size:13px;color:var(--text-2)}
+.phone{width:300px;height:620px;border-radius:38px;background:#111;padding:10px;box-shadow:var(--shadow)}
+.screen{width:100%;height:100%;border-radius:30px;background:var(--surface);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.status{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:11.5px;color:var(--text-2);flex:none}
+.abar{padding:6px 16px 10px;flex:none}
+.abar h3{margin:0 0 8px;font-size:22px;font-weight:600}
+.asearch{background:var(--surface-3);border-radius:999px;padding:9px 14px;color:var(--text-3);font-size:13px}
+.achips{display:flex;gap:6px;padding:4px 16px 8px;overflow:hidden;flex:none}
+.achips span{font-size:12px;border:1px solid var(--border);padding:4px 10px;border-radius:8px;white-space:nowrap}
+.achips span.on{background:var(--accent-2);border-color:transparent;color:var(--accent);font-weight:600}
+.alist{flex:1;overflow:hidden}
+.alist .item{border-bottom:0;padding:8px 16px}
+.bnav{display:flex;justify-content:space-around;border-top:1px solid var(--border);padding:8px 0 14px;font-size:11px;color:var(--text-3);flex:none}
+.bnav div{text-align:center}.bnav .on{color:var(--accent);font-weight:600}
+.bnav i{display:block;width:44px;height:24px;margin:0 auto 2px;border-radius:999px;font-style:normal;line-height:24px}
+.bnav .on i{background:var(--accent-2)}
+.fab{position:absolute;right:16px;bottom:74px;width:52px;height:52px;border-radius:16px;background:var(--accent);color:var(--accent-text);display:grid;place-items:center;font-size:26px;box-shadow:var(--shadow)}
+.adet{padding:0 16px;overflow:hidden;flex:1}
+.adet .card{border-radius:14px}
+.applogin{flex:1;background:linear-gradient(180deg,#1677ff 0,#1677ff 34%,#fff 34%);padding:56px 22px 0;color:#1c2230}
+.applogin .lg{color:#fff;font-size:22px;font-weight:700;margin-bottom:46px}
+.applogin .f{background:#fff;border:1px solid #d5dae3;border-radius:10px;padding:12px;margin-bottom:12px;font-size:14px;color:#8a92a3}
+.applogin .f.focus{border-color:#1677ff;color:#1c2230}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:22px 22px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding:10px 16px 18px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 10px}
+.sheet .item{border:0;padding:8px 4px;border-radius:10px}
+.sheet .item:hover{background:var(--surface-2)}
+.kbd{height:150px;background:var(--surface-3);margin-top:8px;border-radius:10px;display:grid;place-items:center;color:var(--text-3);font-size:12px}
+.suggest{display:flex;gap:6px;padding:6px;background:var(--surface-3);border-radius:10px 10px 0 0;margin-top:auto}
+.suggest span{background:var(--surface);border-radius:999px;padding:5px 10px;font-size:12px;display:flex;gap:6px;align-items:center;white-space:nowrap}
+
+/* import wizard */
+.wiz{min-width:980px;display:grid;grid-template-columns:240px 1fr;height:640px}
+.steps{background:var(--sidebar);border-right:1px solid var(--border);padding:18px 12px}
+.step{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;color:var(--text-2)}
+.step .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1px solid var(--border);background:var(--surface)}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.cur{background:var(--sel);color:var(--accent);font-weight:600}
+.step.cur .n{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.wbody{padding:22px 26px;overflow:auto}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}
+.stat{border:1px solid var(--border);border-radius:11px;padding:10px 12px;background:var(--surface)}
+.stat .v{font-size:22px;font-weight:700}
+.stat .l{font-size:12px;color:var(--text-2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--text-2);font-size:12px;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.admin td:not(:last-child){white-space:nowrap}
+.tbl{border:1px solid var(--border);border-radius:11px;overflow:hidden;background:var(--surface)}
+.wfoot{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+
+/* admin */
+.admin{min-width:980px;display:grid;grid-template-columns:200px 1fr;height:700px}
+.abody{padding:22px 26px;overflow:auto}
+.targets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 18px}
+.tgt{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface)}
+.tgt .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tgt .top b{font-size:14px}
+.tgt .top .badge{margin-left:auto}
+.tgt .kv{display:grid;grid-template-columns:88px 1fr;font-size:12.5px;gap:3px 6px;color:var(--text-2)}
+.tgt .kv span:nth-child(even){color:var(--text)}
+.row2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
+.panel{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px}
+.panel h4{margin:0 0 10px;font-size:14px}
+.drill{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.drill div{display:flex;gap:8px;align-items:center}
+.ok-i{color:var(--ok)} .warn-i{color:var(--warn)}
+.ret{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.ret div{background:var(--surface-2);border-radius:9px;padding:8px;text-align:center;font-size:12px;color:var(--text-2)}
+.ret b{display:block;font-size:17px;color:var(--text)}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(10,15,25,.45);display:none;place-items:center;z-index:50;padding:16px}
+.modal.on{display:grid}
+.mbox{width:min(560px,100%);background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;max-height:85vh;overflow:auto}
+.mbox h3{margin:0 0 4px}
+.rev{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rev .dev{color:var(--text-2);font-size:12px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--surface);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:640px){
+  .page{padding:16px 16px 40px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 32 32">
+      <path d="M6 13 L7.5 4 L13 9.5 Z M26 13 L24.5 4 L19 9.5 Z" fill="currentColor"/>
+      <rect x="5" y="9" width="22" height="20" rx="7" fill="currentColor"/>
+      <circle cx="16" cy="17.5" r="3.2" fill="var(--surface)"/>
+      <rect x="14.6" y="19" width="2.8" height="5.5" rx="1.2" fill="var(--surface)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="topbar">
+  <div class="brand"><svg width="26" height="26" style="color:var(--accent)"><use href="#logo"/></svg>NyaPassword 原型</div>
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-p="desktop">桌面端</button>
+    <button class="tab" data-p="lock">锁屏</button>
+    <button class="tab" data-p="ext">浏览器扩展</button>
+    <button class="tab" data-p="android">Android</button>
+    <button class="tab" data-p="import">导入向导</button>
+    <button class="tab" data-p="admin">服务端 · 备份</button>
+  </nav>
+  <button class="themebtn" id="theme">切换浅色 / 深色</button>
+</div>
+
+<!-- ============ 桌面端 ============ -->
+<section class="page on" id="p-desktop">
+  <h2>桌面端主界面</h2>
+  <p class="lead">三栏布局（参考 1Password 8）：保险库与分类 → 条目列表 → 详情。点击列表切换条目，悬停字段出现复制 / 显示按钮。</p>
+  <div class="win scroll-x">
+    <div class="win-title" style="min-width:980px"><span>NyaPassword</span><div class="win-ctl"><span>—</span><span>☐</span><span>✕</span></div></div>
+    <div class="app">
+      <aside class="side" id="side">
+        <div class="acct"><div class="avatar">N</div><div><div style="font-weight:600;font-size:13px">我的账户</div><div style="font-size:11.5px;color:var(--text-3)">vault.example.com</div></div></div>
+        <button class="nav on" data-cat="all">全部条目 <span class="cnt" id="c-all"></span></button>
+        <button class="nav" data-cat="fav">★ 收藏 <span class="cnt" id="c-fav"></span></button>
+        <button class="nav" data-cat="conflict">⚠ 待处理冲突 <span class="cnt" id="c-conflict"></span></button>
+        <h4>保险库</h4>
+        <button class="nav" data-cat="v:个人"><span class="dot" style="background:#3d63f5"></span>个人</button>
+        <button class="nav" data-cat="v:家庭"><span class="dot" style="background:#e07a2e"></span>家庭（共享）</button>
+        <h4>分类</h4>
+        <button class="nav" data-cat="t:login">登录</button>
+        <button class="nav" data-cat="t:bank">银行账户</button>
+        <button class="nav" data-cat="t:card">银行卡</button>
+        <button class="nav" data-cat="t:doc">证件</button>
+        <button class="nav" data-cat="t:ssh">SSH 密钥</button>
+        <button class="nav" data-cat="t:server">服务器</button>
+        <button class="nav" data-cat="t:wifi">Wi-Fi</button>
+        <h4>标签</h4>
+        <button class="nav" data-cat="g:工作">工作</button>
+        <button class="nav" data-cat="g:金融">金融</button>
+        <h4>其他</h4>
+        <button class="nav" data-cat="none">🛡 安全检查 <span class="cnt">3</span></button>
+        <button class="nav" data-cat="none">🗄 归档 <span class="cnt">17</span></button>
+        <button class="nav" data-cat="none">🗑 回收站 <span class="cnt">2</span></button>
+        <button class="nav" data-cat="none">⚙ 设置</button>
+      </aside>
+      <div class="list">
+        <div class="search"><input id="q" placeholder="搜索，支持拼音首字母（试试 zs）"><button class="btn primary">＋ 新建</button></div>
+        <div class="items" id="items"></div>
+      </div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </div>
+  <div class="note"><b>与 1Password 的差异：</b>“待处理冲突”是一等入口（同步时两端改了同一字段，两个值都保留，用户来选）；“银行账户”“证件”是独立模板；字段带“用途”（手机号也能当用户名）；每个网址单独设置匹配方式；历史版本可以恢复到任意一次保存。</div>
+</section>
+
+<!-- ============ 锁屏 ============ -->
+<section class="page" id="p-lock">
+  <h2>锁屏 / 解锁 · 新设备登录</h2>
+  <p class="lead">左：已登录过的设备，平时只输主密码或用 Windows Hello（Secret Key 已存在本机，由系统保护，离线也能解锁）。右：新设备第一次登录时，才需要输入一次 Secret Key，或扫紧急恢复包上的二维码。</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px">
+  <div class="win">
+    <div class="win-title"><span>NyaPassword</span><div class="win-ctl"><span>—</span><span>☐</span><span>✕</span></div></div>
+    <div class="lock">
+      <div class="lockbox">
+        <svg class="logo" width="64" height="64" style="color:var(--accent)"><use href="#logo"/></svg>
+        <h3>已锁定</h3>
+        <p>我的账户 · vault.example.com</p>
+        <div class="pw"><input type="password" placeholder="主密码" value="correct-horse"><button onclick="toast('已解锁（原型）')">解锁</button></div>
+        <button class="hello" onclick="toast('Windows Hello 验证中…')">🙂 使用 Windows Hello 解锁</button>
+        <div class="small">离线 · 上次同步 3 分钟前 · 忘记主密码？使用紧急恢复包中的恢复码</div>
+      </div>
+    </div>
+  </div>
+  <div class="win">
+    <div class="win-title"><span>NyaPassword · 登录新设备</span><div class="win-ctl"><span>—</span><span>☐</span><span>✕</span></div></div>
+    <div class="lock">
+      <div class="lockbox" style="text-align:left">
+        <h3 style="text-align:center">在这台设备上登录</h3>
+        <p style="text-align:center">只在第一次需要 Secret Key，之后这台设备会记住它</p>
+        <label class="small" style="display:block;margin:0 0 4px">服务器</label>
+        <div class="pw" style="margin-bottom:10px"><input value="https://vault.example.com"></div>
+        <label class="small" style="display:block;margin:0 0 4px">账号</label>
+        <div class="pw" style="margin-bottom:10px"><input value="me@example.com"></div>
+        <label class="small" style="display:block;margin:0 0 4px">Secret Key（在紧急恢复包上）</label>
+        <div class="pw" style="margin-bottom:10px"><input class="mono" value="A1-K7QD2P-X4M9R-T2WZ8-HC5NJ-6YB3E-Q" style="font-size:12.5px"></div>
+        <label class="small" style="display:block;margin:0 0 4px">主密码</label>
+        <div class="pw"><input type="password" value="correct-horse"><button onclick="toast('登录成功，正在同步（原型）')">登录</button></div>
+        <button class="hello" onclick="toast('打开摄像头扫描紧急恢复包二维码（原型）')">▣ 扫描紧急恢复包上的二维码</button>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note"><b>Secret Key 是什么：</b>注册时在你设备上随机生成的一串 128 位密钥，<b>从不发给服务器</b>。真正的加密密钥由“主密码 + Secret Key”一起算出来，所以就算服务器数据库或 OSS 上的备份整个泄露，别人只拿到主密码也解不开，只拿到数据也没法靠猜主密码暴力破解。代价是：新设备第一次登录要输一次（或扫码），而且必须把紧急恢复包保存好。</div>
+</section>
+
+<!-- ============ 浏览器扩展 ============ -->
+<section class="page" id="p-ext">
+  <h2>浏览器扩展</h2>
+  <p class="lead">点击网页里的用户名框 → 内联菜单（渲染在扩展自己的 iframe 里，页面读不到）；工具栏按钮 → 弹窗。可点“登录”看保存提示。</p>
+  <div class="win scroll-x">
+    <div class="browser">
+      <div class="bbar">
+        <span style="color:var(--text-3)">← → ⟳</span>
+        <div class="url">🔒 <b>github.example.com</b>/login</div>
+        <button class="extbtn" id="extbtn" title="NyaPassword"><svg width="18" height="18" style="color:var(--accent)"><use href="#logo"/></svg><span class="n">2</span></button>
+      </div>
+      <div class="site" id="site">
+        <form class="login" onsubmit="return false">
+          <h3>登录到 GitHub（示例）</h3>
+          <label>用户名或邮箱</label>
+          <div class="inwrap"><input id="f-user" autocomplete="username"><svg class="k" style="color:#3d63f5" id="kicon"><use href="#logo"/></svg></div>
+          <label>密码</label>
+          <div class="inwrap"><input id="f-pass" type="password" autocomplete="current-password"></div>
+          <button class="go" id="f-go">登录</button>
+          <button class="pk" onclick="toast('NyaPassword 提供 passkey：octocat（github.example.com）')">🔑 使用通行密钥登录</button>
+        </form>
+        <div class="inline" id="inline">
+          <div class="h"><svg width="14" height="14" style="color:var(--accent)"><use href="#logo"/></svg>NyaPassword · github.example.com</div>
+          <div class="opt" data-u="octocat" data-p="Gh!x9-Lr2mQ#v7Tz"><div class="ico" style="background:#24292f">G</div><div><div>octocat</div><div class="s">GitHub · 个人</div></div><span class="badge acc" style="margin-left:auto">passkey</span></div>
+          <div class="opt" data-u="octocat-work@example.com" data-p="W0rk-Acc0unt!"><div class="ico" style="background:#24292f">G</div><div><div>octocat-work@example.com</div><div class="s">GitHub（公司）· 家庭</div></div></div>
+          <div class="foot"><span>＋ 生成密码</span><span>打开 NyaPassword</span></div>
+        </div>
+        <div class="popup" id="popup">
+          <div class="ph"><svg width="22" height="22" style="color:var(--accent)"><use href="#logo"/></svg><input placeholder="搜索全部条目"><button class="ib" title="锁定">🔒</button></div>
+          <div class="grp">此网站的建议</div>
+          <div class="item"><div class="ico" style="background:#24292f">G</div><div style="min-width:0"><div class="t">GitHub</div><div class="s">octocat · TOTP <span class="mono" data-totp="gh"></span></div></div><button class="btn sm" style="margin-left:auto" onclick="fillDemo('octocat','Gh!x9-Lr2mQ#v7Tz')">填写</button></div>
+          <div class="item"><div class="ico" style="background:#24292f">G</div><div style="min-width:0"><div class="t">GitHub（公司）</div><div class="s">octocat-work@example.com</div></div><button class="btn sm" style="margin-left:auto" onclick="fillDemo('octocat-work@example.com','W0rk-Acc0unt!')">填写</button></div>
+          <div class="grp">最近使用</div>
+          <div class="item"><div class="ico" style="background:#ff6a00">阿</div><div><div class="t">阿里云</div><div class="s">admin@example.com</div></div></div>
+          <div class="item"><div class="ico" style="background:#7a3cff">S</div><div><div class="t">生产服务器</div><div class="s">203.0.113.10 · root</div></div></div>
+          <div class="pf"><button>🔑 生成器</button><button>⏱ 验证码</button><button>⚙ 设置</button><button>↗ 打开主界面</button></div>
+        </div>
+        <div class="savebar" id="savebar">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><svg width="20" height="20" style="color:var(--accent)"><use href="#logo"/></svg><b>更新 GitHub 的密码？</b></div>
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">octocat 在此网站提交了与保存值不同的密码。旧密码会进入历史，可随时找回。</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="$('#savebar').classList.remove('on')">不更新</button><button class="btn" onclick="$('#savebar').classList.remove('on');toast('已另存为新条目')">另存新条目</button><button class="btn primary" onclick="$('#savebar').classList.remove('on');toast('已更新，旧密码在历史中')">更新</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>要点：</b>按 iframe 自己的源匹配（不是顶层页）；相似域名不出建议；填写用原生 setter + input 事件兼容 React / Vue；passkey 由扩展接管 <span class="mono">navigator.credentials</span>，可回落到浏览器原生。</div>
+</section>
+
+<!-- ============ Android ============ -->
+<section class="page" id="p-android">
+  <h2>Android</h2>
+  <p class="lead">Compose 原生界面（Material 3，跟随系统浅色 / 深色）；自动填充走系统 AutofillService 与输入法内联建议，passkey 走凭据管理器（Android 14+）。</p>
+  <div class="phones">
+    <div class="phonecol"><div class="phone"><div class="screen">
+      <div class="status"><span>9:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="abar"><h3>NyaPassword</h3><div class="asearch">🔍 搜索 128 个条目</div></div>
+      <div class="achips"><span class="on">全部</span><span>★ 收藏</span><span>登录</span><span>银行卡</span><span>证件</span></div>
+      <div class="alist" id="a-list"></div>
+      <div class="fab">＋</div>
+      <div class="bnav"><div class="on"><i>▤</i>密码库</div><div><i>⏱</i>验证码</div><div><i>⚿</i>生成器</div><div><i>⚙</i>设置</div></div>
+    </div></div><div class="cap">密码库列表</div></div>
+
+    <div class="phonecol"><div class="phone"><div class="screen">
+      <div class="status"><span>9:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="abar" style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">←</span><span style="flex:1"></span><span>☆</span><span>✎</span><span>⋮</span></div>
+      <div class="adet">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><div class="ico" style="background:#24292f;width:46px;height:46px;border-radius:13px">G</div><div><div style="font-size:19px;font-weight:600">GitHub</div><div style="font-size:12px;color:var(--text-2)">登录 · 个人</div></div></div>
+        <div class="card">
+          <div class="field"><div class="lab">用户名</div><div class="val">octocat</div><div class="tools" style="opacity:1"><button class="ib">⧉</button></div></div>
+          <div class="field"><div class="lab">密码</div><div class="val mono">••••••••••••••••</div><div class="tools" style="opacity:1"><button class="ib">👁</button><button class="ib">⧉</button></div></div>
+          <div class="field"><div class="lab">一次性密码</div><div class="val totp"><span class="code" data-totp="gh" style="font-size:18px"></span><svg class="ring" viewBox="0 0 22 22" data-ring><circle cx="11" cy="11" r="9" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="11" cy="11" r="9" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="56.5" stroke-dashoffset="0" transform="rotate(-90 11 11)" stroke-linecap="round"/></svg></div><div class="tools" style="opacity:1"><button class="ib">⧉</button></div></div>
+        </div>
+        <div class="card">
+          <div class="field"><div class="lab">通行密钥</div><div class="val">github.example.com · octocat</div></div>
+          <div class="field"><div class="lab">网站</div><div class="val" style="color:var(--accent)">github.example.com <span class="badge">域名匹配</span></div></div>
+          <div class="field"><div class="lab">应用</div><div class="val">com.github.android <span class="badge ok">签名已验证</span></div></div>
+        </div>
+      </div>
+    </div></div><div class="cap">条目详情</div></div>
+
+    <div class="phonecol"><div class="phone"><div class="screen">
+      <div class="status" style="background:#1677ff;color:#fff"><span>9:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="applogin">
+        <div class="lg">示例商城 App</div>
+        <div class="f focus">手机号 / 邮箱 |</div>
+        <div class="f">密码</div>
+      </div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);margin-bottom:6px"><svg width="16" height="16" style="color:var(--accent)"><use href="#logo"/></svg>NyaPassword · com.example.shop</div>
+        <div class="item"><div class="ico" style="background:#e4393c">商</div><div><div class="t">示例商城</div><div class="s">138****0000（手机号登录）</div></div></div>
+        <div class="item"><div class="ico" style="background:var(--surface-3);color:var(--text-2)">🔍</div><div><div class="t">搜索其他条目…</div><div class="s">并把此应用关联到所选条目</div></div></div>
+        <div class="suggest"><span>🔑 示例商城 · 138****0000</span><span>🔑 搜索</span></div>
+        <div class="kbd">输入法（Android 11+ 显示内联建议）</div>
+      </div>
+    </div></div><div class="cap">应用内自动填充</div></div>
+  </div>
+  <div class="note"><b>要点：</b>锁定状态下先弹生物识别再填；应用按“包名 + 签名证书”匹配，冒名同包名 App 不出建议；国内 ROM 的自动填充入口不一致，设置里有逐 ROM 引导；Chrome 需打开“使用其他服务自动填充”。</div>
+</section>
+
+<!-- ============ 导入向导 ============ -->
+<section class="page" id="p-import">
+  <h2>导入向导（以 Vaultwarden 导出为例）</h2>
+  <p class="lead">解析 → 预览 → 写入一个可撤销的导入批次 → 逐条比对报告。无法对应的字段一律放进“其他字段”分区，不丢。</p>
+  <div class="win scroll-x">
+    <div class="win-title" style="min-width:980px"><span>NyaPassword · 导入</span><div class="win-ctl"><span>—</span><span>☐</span><span>✕</span></div></div>
+    <div class="wiz">
+      <div class="steps">
+        <div class="step done"><span class="n">✓</span>选择来源</div>
+        <div class="step done"><span class="n">✓</span>选择文件</div>
+        <div class="step cur"><span class="n">3</span>预览与映射</div>
+        <div class="step"><span class="n">4</span>导入</div>
+        <div class="step"><span class="n">5</span>比对报告</div>
+        <div style="margin-top:22px;font-size:12px;color:var(--text-3);padding:0 8px">来源：Bitwarden / Vaultwarden<br>文件：bitwarden_export.zip<br>目标保险库：个人</div>
+      </div>
+      <div class="wbody">
+        <h3 style="margin:0">预览：将导入 412 个条目</h3>
+        <div class="stats">
+          <div class="stat"><div class="v">356</div><div class="l">登录（含 passkey 9 个）</div></div>
+          <div class="stat"><div class="v">21</div><div class="l">安全笔记</div></div>
+          <div class="stat"><div class="v">14</div><div class="l">银行卡</div></div>
+          <div class="stat"><div class="v">6</div><div class="l">身份 → 身份 / 证件</div></div>
+          <div class="stat"><div class="v">15</div><div class="l">SSH 密钥（含 ECDSA 2）</div></div>
+        </div>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>条目</th><th>来源类型</th><th>映射为</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>GitHub</td><td>登录</td><td>登录</td><td><span class="badge ok">完整</span> 用户名、密码、TOTP、2 个网址、passkey、密码历史 3 条</td></tr>
+              <tr><td>招商银行</td><td>银行卡</td><td>银行卡</td><td><span class="badge ok">完整</span> 自定义字段“开户行”→ 模板字段</td></tr>
+              <tr><td>身份证</td><td>身份</td><td>证件</td><td><span class="badge acc">拆分</span> 证件号从“身份”拆到“证件”条目，二者互相引用</td></tr>
+              <tr><td>旧路由器</td><td>登录</td><td>登录</td><td><span class="badge warn">注意</span> 网址 “192.168.1.1:8080” 不是合法 URL，按“主机 + 端口”匹配保存</td></tr>
+              <tr><td>某论坛</td><td>登录</td><td>登录</td><td><span class="badge warn">重复</span> 与已有条目用户名 + 域名相同 → 默认“都保留并打标签”</td></tr>
+              <tr><td>扫描件.pdf</td><td>附件</td><td>附件</td><td><span class="badge">68 MB</span> 大附件，单独上传</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note" style="margin-top:12px">文件夹 → 标签（嵌套保留，如“工作/开发”）；收藏 → 收藏；自定义字段按类型（文本 / 隐藏 / 布尔）放入“其他字段”分区；整批带标签 <span class="mono">导入 2026-10-04 Bitwarden</span>，可一键撤销。</div>
+        <div class="wfoot"><button class="btn">← 上一步</button><div style="display:flex;gap:8px"><button class="btn">导出预览报告</button><button class="btn primary" onclick="toast('导入完成：412 / 412 逐条比对一致')">开始导入</button></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 服务端管理后台 ============ -->
+<section class="page" id="p-admin">
+  <h2>服务端管理后台 · 备份</h2>
+  <p class="lead">多目标自动备份（age 双接收者加密）、上传后校验、每周自动恢复演练、防删模式、失败告警。</p>
+  <div class="win scroll-x">
+    <div class="win-title" style="min-width:980px"><span>vault.example.com/admin</span><div class="win-ctl"><span>—</span><span>☐</span><span>✕</span></div></div>
+    <div class="admin">
+      <aside class="side">
+        <div class="acct"><svg width="26" height="26" style="color:var(--accent)"><use href="#logo"/></svg><div style="font-weight:600">管理后台</div></div>
+        <button class="nav">概览</button>
+        <button class="nav on">备份与恢复</button>
+        <button class="nav">账户与设备</button>
+        <button class="nav">邀请码</button>
+        <button class="nav">审计日志</button>
+        <button class="nav">健康状态</button>
+        <button class="nav">设置</button>
+      </aside>
+      <div class="abody">
+        <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0">备份与恢复</h3><span class="badge ok">正常 · 上次成功 12 分钟前</span><span style="flex:1"></span><button class="btn">试恢复…</button><button class="btn primary" onclick="toast('已开始备份')">立即备份</button></div>
+        <div class="targets">
+          <div class="tgt"><div class="top"><b>阿里云 OSS</b><span class="badge ok">防删模式</span></div><div class="kv"><span>位置</span><span class="mono">oss://example-backup/npw/</span><span>凭据</span><span>只写（PutObject）</span><span>保留</span><span>合规保留 30 天 + 生命周期</span><span>上次</span><span>12 分钟前 · 3.8 MB · 已校验</span></div></div>
+          <div class="tgt"><div class="top"><b>坚果云 WebDAV</b><span class="badge ok">正常</span></div><div class="kv"><span>位置</span><span class="mono">dav.example.com/npw</span><span>凭据</span><span>应用密码</span><span>保留</span><span>由服务端按 GFS 清理</span><span>上次</span><span>12 分钟前 · 已校验</span></div></div>
+          <div class="tgt" style="border-style:dashed;display:grid;place-items:center;text-align:center;color:var(--text-2);cursor:pointer" onclick="toast('选择类型：阿里云 OSS / WebDAV')"><div><div style="font-size:26px;color:var(--accent)">＋</div>添加备份目标<div style="font-size:12px;color:var(--text-3)">阿里云 OSS 或 WebDAV，可配多个</div></div></div>
+        </div>
+        <div class="row2">
+          <div class="panel">
+            <h4>最近备份</h4>
+            <div class="tbl"><table>
+              <thead><tr><th>时间</th><th>触发</th><th>大小</th><th>条目 / seq</th><th>结果</th></tr></thead>
+              <tbody>
+                <tr><td>今天 21:03</td><td>变更（防抖）</td><td>3.8 MB</td><td>1,284 / 98,213</td><td><span class="badge ok">2 / 2 成功</span></td></tr>
+                <tr><td>今天 14:40</td><td>变更（防抖）</td><td>3.8 MB</td><td>1,283 / 98,207</td><td><span class="badge ok">成功</span></td></tr>
+                <tr><td>今天 03:00</td><td>每日</td><td>3.7 MB</td><td>1,281 / 98,190</td><td><span class="badge ok">成功</span></td></tr>
+                <tr><td>昨天 03:00</td><td>每日</td><td>3.7 MB</td><td>1,279 / 98,150</td><td><span class="badge ok">成功</span></td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="panel">
+            <h4>恢复演练</h4>
+            <div class="drill">
+              <div><span class="ok-i">✓</span>自动演练（周日 04:00）：下载 → 解密 → integrity_check → 条目数与 seq 一致 → 附件抽查 20 / 20</div>
+              <div><span class="ok-i">✓</span>上次自动演练：3 天前，耗时 8 秒</div>
+              <div><span class="warn-i">!</span>上次<b>手动</b>演练（用离线私钥）：47 天前 — 建议每季度一次</div>
+            </div>
+            <h4 style="margin-top:16px">保留策略（GFS）</h4>
+            <div class="ret"><div><b>48</b>最近</div><div><b>30</b>每日</div><div><b>12</b>每周</div><div><b>24</b>每月</div></div>
+            <h4 style="margin-top:16px">加密</h4>
+            <div style="font-size:12.5px;color:var(--text-2)">age 接收者：服务端密钥（用于自动演练）+ 离线密钥 <span class="mono">age1…7q2x</span>（在紧急恢复包里）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+// ---- theme ----
+(() => {
+  let saved = null;
+  try { saved = localStorage.getItem('npw-proto-theme'); } catch (e) {}
+  if (saved) document.documentElement.dataset.theme = saved;
+  $('#theme').onclick = () => {
+    const dark = document.documentElement.dataset.theme
+      ? document.documentElement.dataset.theme === 'dark'
+      : matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('npw-proto-theme', next); } catch (e) {}
+  };
+})();
+
+// ---- tabs ----
+$$('.tab').forEach(t => t.onclick = () => {
+  $$('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $$('.page').forEach(p => p.classList.toggle('on', p.id === 'p-' + t.dataset.p));
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 1800);
+}
+
+// ---- sample data (all fictitious) ----
+const ITEMS = [
+  { id: 'gh', type: 'login', icon: 'G', color: '#24292f', title: 'GitHub', sub: 'octocat', vault: '个人', tags: ['工作'], fav: true,
+    sections: [
+      { fields: [
+        { l: '用户名', v: 'octocat' },
+        { l: '密码', v: 'Gh!x9-Lr2mQ#v7Tz', secret: true, strength: true },
+        { l: '一次性密码', totp: 'gh' } ] },
+      { name: '通行密钥', fields: [ { l: 'github.example.com', v: 'octocat · ES256 · 可发现凭据 · 创建于 2026-03-02' } ] },
+      { name: '网站与应用', fields: [
+        { l: '网站', v: 'https://github.example.com/login', badge: '域名匹配', link: true },
+        { l: 'Android 应用', v: 'com.github.android', badge: '签名已验证' } ] },
+      { name: '恢复', fields: [ { l: '恢复码', badge: '多行密文', multiline: true, secret: true,
+        v: 'a1b2c-3d4e5\nf6g7h-8i9j0\nk1l2m-3n4o5\np6q7r-8s9t0\nu1v2w-3x4y5\nz6a7b-8c9d0' } ] } ],
+    notes: '', revs: 12, updated: '3 天前 · 桌面端' },
+  { id: 'aly', type: 'login', icon: '阿', color: '#ff6a00', title: '阿里云', sub: 'admin@example.com', vault: '个人', tags: ['工作'], conflict: true,
+    sections: [ { fields: [
+      { l: '用户名', v: 'admin@example.com' },
+      { l: '密码', v: 'Aly-2026-Remote!', secret: true, strength: true },
+      { l: '一次性密码', totp: 'aly' } ] },
+      { name: '网站与应用', fields: [ { l: '网站', v: 'https://signin.example.com', badge: '主机匹配', link: true } ] } ],
+    revs: 31, updated: '今天 20:58 · Android' },
+  { id: 'cmb', type: 'bank', icon: '招', color: '#c8102e', title: '招商银行 · 储蓄账户', sub: '6214 **** **** 1234', vault: '个人', tags: ['金融'], fav: true,
+    sections: [ { fields: [
+      { l: '开户行 / 支行', v: '招商银行 示例支行' },
+      { l: '账号', v: '6214 0000 0000 1234', secret: true },
+      { l: '户名', v: '张三' } ] },
+      { name: '网银与支付', fields: [
+        { l: '网银登录名', v: 'zhangsan_example' },
+        { l: '登录密码', v: 'Bank-Login-77', secret: true },
+        { l: '支付密码（6 位）', v: '135790', secret: true },
+        { l: 'U 盾 / 证书密码', v: 'Ukey-8642', secret: true },
+        { l: '预留手机号', v: '138 0000 0000' } ] } ],
+    revs: 4, updated: '2 个月前 · 桌面端' },
+  { id: 'card', type: 'card', icon: '卡', color: '#2f6fde', title: '工资卡', sub: '借记卡 · 尾号 5678', vault: '家庭', tags: ['金融'],
+    sections: [ { fields: [
+      { l: '持卡人', v: '张三' }, { l: '卡号', v: '6222 0000 0000 5678', secret: true },
+      { l: '有效期', v: '08 / 2030' }, { l: 'CVV', v: '123', secret: true },
+      { l: '交易密码（6 位）', v: '246810', secret: true }, { l: '开户行', v: '示例银行 某某支行' } ] } ],
+    revs: 2, updated: '1 年前 · 导入' },
+  { id: 'idc', type: 'doc', icon: '证', color: '#0e9f6e', title: '居民身份证', sub: '张三 · 有效期至 2036-05-01', vault: '个人', tags: [],
+    sections: [ { fields: [
+      { l: '证件类型', v: '居民身份证' }, { l: '号码', v: '110101199001011234', secret: true },
+      { l: '姓名', v: '张三' }, { l: '签发机关', v: '示例市公安局示例分局' }, { l: '有效期', v: '2016-05-01 至 2036-05-01' } ] },
+      { name: '附件', fields: [ { l: '正反面.jpg', v: '2 个文件 · 1.4 MB' } ] } ],
+    revs: 1, updated: '半年前 · Android' },
+  { id: 'srv', type: 'server', icon: 'S', color: '#7a3cff', title: '生产服务器', sub: '203.0.113.10 · root', vault: '个人', tags: ['工作'],
+    sections: [ { fields: [
+      { l: '地址', v: '203.0.113.10' }, { l: '端口', v: '22' }, { l: '用户名', v: 'root' },
+      { l: 'SSH 密钥', v: '→ id_ed25519（工作笔记本）', link: true } ] } ],
+    revs: 6, updated: '上周 · 桌面端' },
+  { id: 'ssh', type: 'ssh', icon: '⌘', color: '#334155', title: 'id_ed25519（工作笔记本）', sub: 'SHA256:3fX…Qk', vault: '个人', tags: ['工作'],
+    sections: [ { fields: [
+      { l: '类型', v: 'Ed25519' },
+      { l: '公钥', v: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyOnly user@example.com', mono: true },
+      { l: '私钥', v: '-----BEGIN OPENSSH PRIVATE KEY-----', secret: true },
+      { l: '指纹', v: 'SHA256:3fXexampleexampleexampleQk', mono: true } ] },
+      { name: 'SSH agent', fields: [ { l: '使用确认', v: '每次签名都确认（可按会话记住）' }, { l: 'Git 签名', v: '已启用' } ] } ],
+    revs: 3, updated: '1 个月前 · 桌面端' },
+  { id: 'wifi', type: 'wifi', icon: '≋', color: '#0891b2', title: '家里 Wi-Fi', sub: 'Example-Home-5G', vault: '家庭', tags: [],
+    sections: [ { fields: [ { l: '网络名称', v: 'Example-Home-5G' }, { l: '密码', v: 'wifi-pass-2026', secret: true }, { l: '加密', v: 'WPA3' } ] } ],
+    revs: 2, updated: '3 个月前' },
+];
+// pinyin / initials index (the real one is generated by the core)
+const PY = { aly: 'aliyun aly', cmb: 'zhaoshangyinhang zsyh chuxuzhanghu cxzh', card: 'gongzika gzk',
+  idc: 'juminshenfenzheng jmsfz sfz', srv: 'shengchanfuwuqi scfwq', ssh: 'gongzuobijiben gzbjb', wifi: 'jialiwifi jl' };
+const TYPE = { login: '登录', bank: '银行账户', card: '银行卡', doc: '证件', server: '服务器', ssh: 'SSH 密钥', wifi: 'Wi-Fi' };
+
+// ---- fake TOTP (deterministic, for display only) ----
+function totp(seed) {
+  const step = Math.floor(Date.now() / 30000);
+  let h = 2166136261;
+  for (const c of seed + step) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  const n = String(Math.abs(h) % 1000000).padStart(6, '0');
+  return n.slice(0, 3) + ' ' + n.slice(3);
+}
+function tick() {
+  const left = 30 - (Math.floor(Date.now() / 1000) % 30);
+  $$('[data-totp]').forEach(e => e.textContent = totp(e.dataset.totp));
+  $$('[data-ring] circle:last-child').forEach(c => {
+    c.setAttribute('stroke-dashoffset', String(56.5 * (1 - left / 30)));
+    c.setAttribute('stroke', left <= 5 ? 'var(--bad)' : 'var(--accent)');
+  });
+  $$('[data-left]').forEach(e => e.textContent = left + ' 秒');
+}
+setInterval(tick, 1000);
+
+// ---- desktop ----
+let cat = 'all', cur = 'gh', revealed = new Set();
+function filtered() {
+  const q = $('#q').value.trim().toLowerCase();
+  return ITEMS.filter(i => {
+    if (cat === 'fav' && !i.fav) return false;
+    if (cat === 'conflict' && !i.conflict) return false;
+    if (cat.startsWith('v:') && i.vault !== cat.slice(2)) return false;
+    if (cat.startsWith('t:') && i.type !== cat.slice(2)) return false;
+    if (cat.startsWith('g:') && !i.tags.includes(cat.slice(2))) return false;
+    if (cat === 'none') return false;
+    return !q || (i.title + ' ' + i.sub + ' ' + (PY[i.id] || '')).toLowerCase().includes(q);
+  });
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderList() {
+  const list = filtered();
+  $('#items').innerHTML = list.map(i => `
+    <div class="item ${i.id === cur ? 'on' : ''}" data-id="${i.id}">
+      <div class="ico" style="background:${i.color}">${esc(i.icon)}</div>
+      <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="s">${esc(i.sub)}</div></div>
+      ${i.conflict ? '<span class="badge warn">冲突</span>' : i.fav ? '<span class="badge">★</span>' : ''}
+    </div>`).join('') || '<div style="padding:24px;color:var(--text-3);text-align:center">没有条目</div>';
+  $$('#items .item').forEach(e => e.onclick = () => { cur = e.dataset.id; renderList(); renderDetail(); });
+  $('#c-all').textContent = ITEMS.length;
+  $('#c-fav').textContent = ITEMS.filter(i => i.fav).length;
+  $('#c-conflict').textContent = ITEMS.filter(i => i.conflict).length;
+}
+function fieldHtml(f, key) {
+  if (f.totp) return `<div class="field"><div class="lab">${f.l}</div>
+    <div class="val totp"><span class="code" data-totp="${f.totp}"></span>
+    <svg class="ring" viewBox="0 0 22 22" data-ring><circle cx="11" cy="11" r="9" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="11" cy="11" r="9" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="56.5" transform="rotate(-90 11 11)" stroke-linecap="round"/></svg>
+    <span style="font-size:12px;color:var(--text-3)" data-left></span></div>
+    <div class="tools"><button class="ib" data-copy="totp:${f.totp}">复制</button><button class="ib">二维码</button></div></div>`;
+  const show = !f.secret || revealed.has(key);
+  const lines = f.multiline ? f.v.split('\n').length : 0;
+  const val = show
+    ? (f.multiline ? `<div style="white-space:pre-wrap;line-height:1.7">${esc(f.v)}</div>` : esc(f.v))
+    : (f.multiline ? `•••••••••••• <span style="font-size:12px;color:var(--text-3);font-family:inherit">（${lines} 行，已隐藏）</span>` : '••••••••••••');
+  return `<div class="field"><div class="lab">${esc(f.l)}${f.badge ? ` <span class="badge">${f.badge}</span>` : ''}</div>
+    <div class="val ${f.secret || f.mono ? 'mono' : ''}" ${f.link ? 'style="color:var(--accent)"' : ''}>${val}
+      ${f.strength && show ? '<div class="pw-strength"><i></i></div><div style="font-size:11.5px;color:var(--ok)">非常强 · 16 位 · 未在其他条目重复</div>' : ''}</div>
+    <div class="tools">${f.secret ? `<button class="ib" data-rev="${key}">${show ? '隐藏' : '显示'}</button>` : ''}<button class="ib" data-copy="${esc(f.l)}">${f.multiline ? '全部复制' : '复制'}</button>${f.multiline ? '<button class="ib" data-copy="line">按行复制</button>' : f.secret ? '<button class="ib">大字</button>' : ''}</div></div>`;
+}
+function renderDetail() {
+  const i = ITEMS.find(x => x.id === cur);
+  if (!i) { $('#detail').innerHTML = ''; return; }
+  $('#detail').innerHTML = `
+    <div class="dhead"><div class="ico" style="background:${i.color}">${esc(i.icon)}</div>
+      <div><h3>${esc(i.title)}</h3><div class="sub">${TYPE[i.type]} · ${i.vault}${i.tags.map(t => ' · #' + t).join('')}</div></div>
+      <div class="acts"><button class="btn sm">${i.fav ? '★' : '☆'}</button><button class="btn sm">编辑</button><button class="btn sm">⋯</button></div></div>
+    ${i.conflict ? `<div class="banner"><span>⚠</span><div style="flex:1"><b>同步冲突：</b>“密码”在桌面端（离线时）和 Android 上被改成了不同的值。当前显示 Android 的值，桌面端的值已保留。
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" id="cf-view">对比两个值</button><button class="btn sm primary" id="cf-keep">使用当前值</button><button class="btn sm" id="cf-other">改用桌面端的值</button></div></div></div>` : ''}
+    ${i.sections.map((s, si) => `<div class="card">${s.name ? `<div class="sec">${s.name}</div>` : ''}${s.fields.map((f, fi) => fieldHtml(f, i.id + si + '-' + fi)).join('')}</div>`).join('')}
+    <div class="meta"><span>最后修改：${i.updated}</span><a href="#" id="hist" style="color:var(--accent)">历史版本（${i.revs}）</a><span>条目格式 1.0</span></div>`;
+  $$('#detail [data-rev]').forEach(b => b.onclick = () => { const k = b.dataset.rev; revealed.has(k) ? revealed.delete(k) : revealed.add(k); renderDetail(); });
+  $$('#detail [data-copy]').forEach(b => b.onclick = () => toast('已复制，90 秒后从剪贴板清除'));
+  $('#hist').onclick = e => { e.preventDefault(); showHistory(i); };
+  if (i.conflict) {
+    $('#cf-view').onclick = () => showModal(`<h3>对比冲突的值</h3><p style="color:var(--text-2);margin:0 0 12px">两个值都会留在历史版本里，选哪个都不会丢。</p>
+      <div class="card"><div class="field"><div class="lab">Android · 今天 20:58（当前）</div><div class="val mono">Aly-2026-Remote!</div></div>
+      <div class="field"><div class="lab">桌面端 · 今天 18:12（离线时修改）</div><div class="val mono">Aly-2026-Desk#</div></div></div>
+      <div style="text-align:right"><button class="btn" onclick="closeModal()">关闭</button></div>`);
+    const done = m => { i.conflict = false; toast(m); renderList(); renderDetail(); };
+    $('#cf-keep').onclick = () => done('已保留当前值，冲突已处理');
+    $('#cf-other').onclick = () => done('已改用桌面端的值，冲突已处理');
+  }
+  tick();
+}
+function showHistory(i) {
+  const rows = [
+    ['r' + i.revs, i.updated, '修改 密码'],
+    ['r' + (i.revs - 1), '上周 · 浏览器扩展', '新增 网址'],
+    ['r' + (i.revs - 2), '上月 · 导入', '导入自 Bitwarden'],
+  ];
+  showModal(`<h3>历史版本 · ${esc(i.title)}</h3><p style="color:var(--text-2);margin:0 0 8px">服务端只追加不改写，每次保存都是一个版本，可以查看并恢复。</p>
+    ${rows.map((r, k) => `<div class="rev"><span class="badge ${k ? '' : 'acc'}">${r[0]}</span><div>${r[2]}<div class="dev">${r[1]}</div></div>${k ? '<button class="btn sm" onclick="closeModal();toast(\'已恢复为该版本（作为新版本保存）\')">恢复</button>' : '<span class="badge">当前</span>'}</div>`).join('')}
+    <div style="text-align:right;margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>`);
+}
+function showModal(html) { $('#mbox').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal() { $('#modal').classList.remove('on'); }
+$('#modal').onclick = e => { if (e.target.id === 'modal') closeModal(); };
+$$('#side .nav').forEach(n => n.onclick = () => {
+  $$('#side .nav').forEach(x => x.classList.toggle('on', x === n));
+  cat = n.dataset.cat; const l = filtered(); if (l.length && !l.find(i => i.id === cur)) cur = l[0].id;
+  renderList(); renderDetail();
+});
+$('#q').oninput = renderList;
+
+// ---- android list ----
+$('#a-list').innerHTML = ITEMS.slice(0, 7).map(i => `<div class="item"><div class="ico" style="background:${i.color}">${esc(i.icon)}</div><div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="s">${esc(i.sub)}</div></div>${i.conflict ? '<span class="badge warn">冲突</span>' : ''}</div>`).join('');
+
+// ---- extension demo ----
+function placeInline() {
+  const site = $('#site').getBoundingClientRect(), r = $('#f-user').getBoundingClientRect();
+  const m = $('#inline'); m.style.left = (r.left - site.left) + 'px'; m.style.top = (r.bottom - site.top + 6) + 'px';
+}
+function fillDemo(u, p) {
+  $('#f-user').value = u; $('#f-pass').value = p;
+  $('#inline').classList.remove('on'); $('#popup').classList.remove('on');
+  toast('已填写；一次性密码已复制到剪贴板');
+}
+$('#f-user').onfocus = () => { placeInline(); $('#inline').classList.add('on'); };
+$('#kicon').onclick = () => { placeInline(); $('#inline').classList.toggle('on'); };
+$$('#inline .opt').forEach(o => o.onclick = () => fillDemo(o.dataset.u, o.dataset.p));
+$('#extbtn').onclick = () => { $('#savebar').classList.remove('on'); $('#popup').classList.toggle('on'); };
+$('#f-go').onclick = () => {
+  if (!$('#f-user').value) { toast('先填写用户名'); return; }
+  $('#popup').classList.remove('on'); $('#inline').classList.remove('on');
+  if ($('#f-pass').value !== 'Gh!x9-Lr2mQ#v7Tz') $('#savebar').classList.add('on'); else toast('登录（示例）');
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('#inline,#f-user,#kicon')) $('#inline').classList.remove('on');
+  if (!e.target.closest('#popup,#extbtn')) $('#popup').classList.remove('on');
+});
+
+renderList(); renderDetail(); tick();
+</script>
+</body>
+</html>

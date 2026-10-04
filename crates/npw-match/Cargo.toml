@@ -1,0 +1,12 @@
+[package]
+name = "npw-match"
+description = "NyaPassword URL and app matching: registrable domains, match modes, equivalent domains"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+url = "2"
+psl = "2"
+regex-lite = "0.1"
