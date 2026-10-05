@@ -1,6 +1,26 @@
 [package]
 name = "npw-ffi"
+description = "NyaPassword client core for native apps (Android; later iOS / macOS) via UniFFI"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
+
+# An rlib: the product crate (android/ `npw-android`) re-exports it as the
+# cdylib the app loads, and generates the Kotlin bindings from that library.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+npw-core.workspace = true
+npw-model.workspace = true
+npw-crypto.workspace = true
+npw-otp.workspace = true
+npw-match.workspace = true
+npw-passkey.workspace = true
+npw-store-sqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true }
+uniffi = { version = "0.32", default-features = false }
