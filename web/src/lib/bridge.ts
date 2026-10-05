@@ -25,6 +25,41 @@ import type {
   VaultView,
 } from './types';
 
+/**
+ * What the lock screen can offer besides the master password. The web vault
+ * and the extension only fill the first three fields; the desktop app adds
+ * the rest (Windows Hello at start, PIN, the 14-day rule).
+ */
+export interface QuickUnlockStatus {
+  /** The OS offers biometrics (Windows Hello). */
+  available: boolean;
+  /** Biometrics can unlock right now. */
+  enabled: boolean;
+  label: string;
+  /** Biometric unlock is set up (it may be suspended right now). */
+  quick_set?: boolean;
+  /** "启动时可直接用生物识别解锁". */
+  biometric_at_start?: boolean;
+  /** A PIN can be set up on this device. */
+  pin_supported?: boolean;
+  pin_set?: boolean;
+  /** The PIN can unlock right now. */
+  pin?: boolean;
+  pin_tries_left?: number;
+  /** Why biometrics and the PIN need the master password now (empty: they do not). */
+  password_reason?: string;
+}
+
+/** How `verifyUser` can check the user besides the master password. */
+export interface VerifyOptions {
+  /** Biometrics (Windows Hello): `verifyUser()` without a secret. */
+  biometric: boolean;
+  label: string;
+  /** Desktop: a PIN is set and usable (`verifyUser(undefined, pin)`). */
+  pin?: boolean;
+  pin_tries_left?: number;
+}
+
 export interface Bridge {
   readonly kind: 'web' | 'desktop';
   /** The server URL to suggest on the welcome screen (the web vault's own origin). */
@@ -40,15 +75,16 @@ export interface Bridge {
 
   /**
    * Verifies the user again without changing the lock state, before using an
-   * item marked "使用前需要验证": the master password, or (desktop) Windows
-   * Hello when `password` is omitted. Rejects with `wrong_password` / a message.
+   * item marked "使用前需要验证": the master password, (desktop) the PIN, or
+   * (desktop) Windows Hello when both are omitted. Rejects with
+   * `wrong_password` / `wrong_pin` / `pin_wiped` / a message.
    */
-  verifyUser(password?: string): Promise<void>;
-  /** Whether `verifyUser()` without a password (biometrics) can be offered, and its label. */
-  verifyUserOptions(): Promise<{ biometric: boolean; label: string }>;
+  verifyUser(password?: string, pin?: string): Promise<void>;
+  /** Whether `verifyUser()` without a password (biometrics, PIN) can be offered, and its label. */
+  verifyUserOptions(): Promise<VerifyOptions>;
 
-  /** Biometric / OS unlock (Windows Hello, Touch ID). */
-  quickUnlockStatus(): Promise<{ available: boolean; enabled: boolean; label: string }>;
+  /** Biometric / OS unlock (Windows Hello, Touch ID), and the desktop's PIN. */
+  quickUnlockStatus(): Promise<QuickUnlockStatus>;
   setQuickUnlock(enabled: boolean): Promise<void>;
   quickUnlock(): Promise<void>;
 

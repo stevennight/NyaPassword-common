@@ -14,6 +14,7 @@ pub mod generator;
 pub mod health;
 mod items;
 pub mod passkeys;
+pub mod pin;
 mod remote;
 pub mod search;
 pub mod security;
@@ -27,6 +28,7 @@ pub use client::{
 };
 pub use health::HealthReport;
 pub use items::ItemFilter;
+pub use pin::PinBlob;
 pub use remote::{ImportResult, IMPORT_KEY};
 pub use security::{Finding, Issue, SecurityReport};
 pub use store::{LocalItem, MemoryStore, PendingEdit, Store, StoreOp};

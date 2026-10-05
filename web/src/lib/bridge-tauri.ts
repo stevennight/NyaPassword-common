@@ -83,6 +83,10 @@ async function listenToApp() {
   });
   // e.g. an SSH client asking for a key while the vault is locked
   await listen<string>('npw:notice', (e) => toast(e.payload, 'info', 8000));
+  // a browser extension waits for this app to be unlocked (empty: it stopped waiting)
+  await listen<string>('npw:unlock-request', (e) => {
+    vault.unlockRequest = e.payload;
+  });
   await listen<UpdateCheck>('npw:update', (e) => {
     toast(`NyaPassword ${e.payload.latest} 已发布，可在“设置 → 更新”中安装`, 'info', 8000);
   });
@@ -111,6 +115,10 @@ export async function createBridge(): Promise<Bridge> {
     setBrowserBridge: (enabled, extensionIds) => call<DesktopSettings>('set_browser_bridge', { enabled, extensionIds }),
     removePairing: (id) => call<DesktopSettings>('remove_pairing', { id }),
     checkAutoType: (sequence) => call('check_auto_type', { sequence }),
+    pinUnlock: (pin) => call('pin_unlock', { pin }),
+    setPin: (pin) => call('set_pin', { pin }),
+    removePin: () => call('remove_pin'),
+    setBiometricAtStart: (enabled) => call('set_biometric_at_start', { enabled }),
   };
 
   const bridge: Bridge & { desktop: DesktopApi } = {
@@ -125,7 +133,7 @@ export async function createBridge(): Promise<Bridge> {
     signIn: (server, login, password, secretKey) => call('sign_in', { server, login, password, secretKey }),
     unlock: (password) => call('unlock', { password }),
     lock: () => call('lock'),
-    verifyUser: (password) => call('verify_user', { password: password || null }),
+    verifyUser: (password, pin) => call('verify_user', { password: password || null, pin: pin || null }),
     verifyUserOptions: () => call('verify_user_options'),
     signOut: (force) => call('sign_out', { force }),
     emergencyKit: () => call('emergency_kit'),

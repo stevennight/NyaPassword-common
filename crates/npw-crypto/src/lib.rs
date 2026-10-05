@@ -16,6 +16,7 @@ pub mod envelope;
 pub mod kdf;
 pub mod keys;
 pub mod opaque;
+pub mod pin;
 pub mod secret_key;
 pub mod stream;
 

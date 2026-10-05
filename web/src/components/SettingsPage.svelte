@@ -4,6 +4,8 @@
   import { errorCode, errorMessage } from '$lib/bridge';
   import { dateTime, errorText, relativeTime } from '$lib/i18n';
   import { confirm, toast } from '$lib/ui.svelte';
+  import { desktopApi } from '$lib/desktop';
+  import type { QuickUnlockStatus } from '$lib/bridge';
   import type { AuditEntry, DeviceRecord, EmergencyKit as Kit } from '$lib/types';
   import EmergencyKit from './EmergencyKit.svelte';
   import Modal from './Modal.svelte';
@@ -11,7 +13,14 @@
   let devices = $state<DeviceRecord[]>([]);
   let audit = $state<AuditEntry[]>([]);
   let kit = $state<Kit | null>(null);
-  let quick = $state({ available: false, enabled: false, label: '' });
+  let quick = $state<QuickUnlockStatus>({ available: false, enabled: false, label: '' });
+  const desk = desktopApi(vault.bridge);
+  // PIN (desktop only): set / change
+  let pinOpen = $state(false);
+  let pin1 = $state('');
+  let pin2 = $state('');
+  let pinMsg = $state('');
+  let pinBusy = $state(false);
   let cur = $state('');
   let next = $state('');
   let next2 = $state('');
@@ -34,7 +43,9 @@
     try {
       await vault.bridge.changePassword(cur, next);
       cur = next = next2 = '';
-      toast('主密码已修改；其他设备需要用新密码重新登录', 'ok', 5000);
+      const cleared = quick.quick_set || quick.pin_set;
+      toast(`主密码已修改；其他设备需要用新密码重新登录${cleared ? `。本机的 ${quick.label || '生物识别'} / PIN 解锁已清除，请重新设置` : ''}`, 'ok', 6000);
+      quick = await vault.bridge.quickUnlockStatus().catch(() => quick);
     } catch (err) {
       pwMsg = errorText(errorCode(err), errorMessage(err));
     }
@@ -46,13 +57,50 @@
     devices = await vault.bridge.devices();
   }
 
+  /** Set up (the web vault: usable) right now. */
+  const quickOn = $derived(quick.quick_set ?? quick.enabled);
+
   async function toggleQuick() {
     try {
-      await vault.bridge.setQuickUnlock(!quick.enabled);
+      await vault.bridge.setQuickUnlock(!quickOn);
       quick = await vault.bridge.quickUnlockStatus();
     } catch (e) {
       vault.fail(e);
     }
+  }
+
+  async function setAtStart(on: boolean) {
+    if (!desk) return;
+    await desk.setBiometricAtStart(on).catch(vault.fail.bind(vault));
+    quick = await vault.bridge.quickUnlockStatus().catch(() => quick);
+  }
+
+  async function savePin(e: Event) {
+    e.preventDefault();
+    if (!desk) return;
+    pinMsg = '';
+    if ([...pin1].length < 4) return (pinMsg = 'PIN 至少 4 个字符（任意字符）');
+    if (pin1 !== pin2) return (pinMsg = '两次输入的 PIN 不一致');
+    pinBusy = true;
+    // let the button repaint before the key derivation blocks
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      await desk.setPin(pin1);
+      pin1 = pin2 = '';
+      pinOpen = false;
+      toast(quick.pin_set ? 'PIN 已修改' : 'PIN 已设置', 'ok');
+      quick = await vault.bridge.quickUnlockStatus().catch(() => quick);
+    } catch (err) {
+      pinMsg = errorText(errorCode(err), errorMessage(err));
+    } finally {
+      pinBusy = false;
+    }
+  }
+
+  async function removePin() {
+    if (!desk || !(await confirm('删除 PIN？', '之后只能用主密码或生物识别解锁。', '删除', true))) return;
+    await desk.removePin().catch(vault.fail.bind(vault));
+    quick = await vault.bridge.quickUnlockStatus().catch(() => quick);
   }
 
   async function createVault() {
@@ -123,8 +171,31 @@
       </select>
     </div>
     {#if quick.available}
-      <div class="row"><span class="grow">使用 {quick.label} 解锁（重启后或每 14 天仍需主密码）</span><button class="btn" onclick={toggleQuick}>{quick.enabled ? '关闭' : '开启'}</button></div>
+      <div class="row"><span class="grow">使用 {quick.label} 解锁<span class="faint small">（每 14 天仍需输入一次主密码；重置 {quick.label} 后失效）</span></span><button class="btn" onclick={toggleQuick}>{quickOn ? '关闭' : '开启'}</button></div>
+      {#if desk && quickOn}
+        <label class="row"><input type="checkbox" checked={quick.biometric_at_start ?? true} onchange={(e) => setAtStart((e.target as HTMLInputElement).checked)} />
+          <span class="grow">启动时可直接用生物识别解锁（{quick.label}）<span class="faint small">（关闭后，每次启动后第一次解锁需要主密码）</span></span></label>
+      {/if}
     {/if}
+    {#if desk && quick.pin_supported}
+      <div class="row">
+        <span class="grow">PIN 解锁<span class="faint small">（至少 4 个字符；连续输错 5 次作废；每 14 天仍需输入一次主密码；也可用于“使用前需要验证”）</span></span>
+        {#if quick.pin_set}<button class="btn" onclick={() => (pinOpen = !pinOpen)}>修改</button><button class="btn danger" onclick={removePin}>删除</button>
+        {:else}<button class="btn" onclick={() => (pinOpen = !pinOpen)}>设置</button>{/if}
+      </div>
+      {#if pinOpen}
+        <form class="pinform" onsubmit={savePin}>
+          <input class="input" type="password" bind:value={pin1} placeholder="新 PIN" autocomplete="off" disabled={pinBusy} />
+          <input class="input" type="password" bind:value={pin2} placeholder="再输一次 PIN" autocomplete="off" disabled={pinBusy} />
+          {#if pinMsg}<div class="banner bad small">{pinMsg}</div>{/if}
+          <button class="btn primary" disabled={pinBusy || !pin1}>{pinBusy ? '请稍候…' : '保存 PIN'}</button>
+          <p class="faint small">PIN 只保存在这台电脑上（Windows 凭据管理器保护），不会上传。忘记 PIN 时用主密码解锁即可。</p>
+        </form>
+      {/if}
+    {:else if desk && quick.pin_supported === false && vault.lock?.signed_in}
+      <div class="row"><span class="grow faint small">PIN 解锁不可用：设备密钥没有保存在系统凭据存储中</span></div>
+    {/if}
+    {#if quick.password_reason}<div class="faint small">{quick.password_reason}</div>{/if}
     <div class="row"><span class="grow">外观</span>
       <select class="select" style="width:auto" value={theme} onchange={(e) => setTheme((e.target as HTMLSelectElement).value)}><option value="auto">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
   </section>
@@ -189,6 +260,7 @@
   section { padding: 14px 16px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
   h3 { margin: 0; font-size: 14px; }
   form { display: flex; flex-direction: column; gap: 8px; }
+  .pinform { max-width: 360px; }
   form .btn { align-self: flex-start; }
   .kv { display: grid; grid-template-columns: 80px 1fr; gap: 4px 12px; font-size: 13.5px; }
   .kv span:nth-child(odd) { color: var(--text-2); }

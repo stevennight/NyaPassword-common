@@ -4,7 +4,7 @@
   // prompt's id; closing it denies. Approving needs a click: the window may
   // pop up while the user is typing elsewhere, so keys never approve, and the
   // buttons only work after a short moment. A key whose item is marked
-  // "使用前需要验证" needs the master password (or Windows Hello) every time;
+  // "使用前需要验证" needs the master password (or the PIN, or Windows Hello) every time;
   // the app refuses the approval until this window verified the user.
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
@@ -18,13 +18,15 @@
   let password = $state('');
   let busy = $state(false);
   let error = $state('');
-  let bio = $state({ biometric: false, label: '' });
+  let bio = $state<{ biometric: boolean; label: string; pin?: boolean }>({ biometric: false, label: '' });
+  /** The field takes the PIN instead of the master password. */
+  let usePin = $state(false);
 
   onMount(async () => {
     info = await invoke<Info | null>('prompt_info').catch(() => null);
     setTimeout(() => (armed = true), 700);
     if (info?.kind === 'ssh_sign' && info.reprompt) {
-      bio = await invoke<{ biometric: boolean; label: string }>('verify_user_options').catch(() => ({ biometric: false, label: '' }));
+      bio = await invoke<{ biometric: boolean; label: string; pin?: boolean }>('verify_user_options').catch(() => ({ biometric: false, label: '' }));
     }
   });
 
@@ -36,17 +38,22 @@
     return o?.message ?? String(e);
   };
 
-  /** Verifies (password, or Windows Hello without one), then allows this one signature. */
+  /** Verifies (password or PIN, or Windows Hello without one), then allows this one signature. */
   async function verifyAndAllow(pw?: string) {
     if (busy) return;
     busy = true;
     error = '';
     try {
-      await invoke('prompt_verify', { password: pw || null });
+      await invoke('prompt_verify', usePin ? { password: null, pin: pw || null } : { password: pw || null, pin: null });
       password = '';
       await answer('once');
     } catch (e) {
       error = errText(e);
+      // a deleted / suspended PIN: back to the master password
+      if (usePin) {
+        bio = await invoke<{ biometric: boolean; label: string; pin?: boolean }>('verify_user_options').catch(() => bio);
+        if (!bio.pin) usePin = false;
+      }
     } finally {
       busy = false;
     }
@@ -71,14 +78,15 @@
       <dt>算法</dt><dd class="mono small">{info.algorithm}</dd>
     </dl>
     {#if info.reprompt}
-      <p class="small">🔒 这个密钥的条目设置了“使用前需要验证”：每次签名都要输入主密码{bio.biometric ? `或使用 ${bio.label}` : ''}。</p>
+      <p class="small">🔒 这个密钥的条目设置了“使用前需要验证”：每次签名都要输入主密码{bio.pin ? '或 PIN' : ''}{bio.biometric ? `或使用 ${bio.label}` : ''}。</p>
       <!-- typing the password does not approve: the button needs a click -->
-      <input class="input" type="password" bind:value={password} placeholder="主密码" autocomplete="off" disabled={busy}
+      <input class="input" type="password" bind:value={password} placeholder={usePin ? 'PIN' : '主密码'} autocomplete="off" disabled={busy}
         onkeydown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
       {#if error}<p class="err small">{error}</p>{/if}
       <div class="row acts">
         <button class="btn" onclick={() => answer('deny')}>拒绝</button>
         <span class="spacer"></span>
+        {#if bio.pin}<button class="btn ghost sm" disabled={busy} onclick={() => { usePin = !usePin; password = ''; error = ''; }}>{usePin ? '改用主密码' : '使用 PIN'}</button>{/if}
         {#if bio.biometric}<button class="btn" disabled={!armed || busy} onclick={() => verifyAndAllow()}>使用 {bio.label} 并允许</button>{/if}
         <button class="btn primary" disabled={!armed || busy || !password} onclick={() => verifyAndAllow(password)}>验证并允许一次</button>
       </div>

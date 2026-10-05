@@ -207,6 +207,7 @@ fn aad_of(
         "attachment" => aad::attachment(&id(0)),
         "device_secret" => aad::device_secret(name.unwrap()),
         "quick_unlock" => aad::quick_unlock(&id(0)),
+        "pin_unlock" => aad::pin_unlock(&id(0)),
         "export" => aad::export(&id(0)),
         other => panic!("unknown AAD function {other}"),
     }
@@ -926,6 +927,248 @@ fn frozen_crypto_vectors() {
     check(&v);
 }
 
+// ------------------------------------------------------------------ PIN unlock (tests/vectors/pin-v1.json)
+
+/// PIN unlock was added after v1.json was frozen, so its vectors live in their
+/// own file (docs/加密规格.md §4.4, §12.1). Regenerate only before PIN unlock
+/// is released: `$env:NPW_BLESS_PIN=1; cargo test -p npw-crypto --test vectors`.
+#[derive(Serialize, Deserialize)]
+struct PinVectors {
+    version: u32,
+    note: String,
+    aad: Vec<AadVector>,
+    pin_key: Vec<PinKeyVector>,
+    pin_wrap: Vec<EnvelopeVector>,
+    pin_wrap_invalid: Vec<InvalidCiphertext>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PinKeyVector {
+    name: String,
+    pin: String,
+    /// UTF-8 bytes of NFKD(pin): what Argon2id hashes.
+    pin_nfkd_hex: String,
+    salt_hex: String,
+    params: KdfParams,
+    pin_key_hex: String,
+}
+
+/// (name, PIN key, nonce, AK)
+type WrapCase = (&'static str, Vec<u8>, Vec<u8>, Vec<u8>);
+
+fn gen_pin() -> PinVectors {
+    let salt = seq(0x30, 16);
+    let cases: Vec<(&str, &str, Vec<u8>, KdfParams)> = vec![
+        (
+            "four digits, test parameters",
+            "1234",
+            salt.clone(),
+            params(256, 1, 1),
+        ),
+        (
+            "full-width digits fold to the same key as pin_key[0]",
+            "\u{ff11}\u{ff12}\u{ff13}\u{ff14}",
+            salt.clone(),
+            params(256, 1, 1),
+        ),
+        (
+            "any characters: CJK, space, punctuation",
+            "猫 pin!",
+            seq(0x90, 16),
+            params(256, 1, 1),
+        ),
+        (
+            "six digits, 32-byte salt",
+            "000000",
+            seq(0xa0, 32),
+            params(256, 1, 1),
+        ),
+        (
+            "the lowest accepted parameters (16 MiB, t=1, p=1)",
+            "2580",
+            salt,
+            params(16 * 1024, 1, 1),
+        ),
+    ];
+    let pin_key: Vec<PinKeyVector> = cases
+        .into_iter()
+        .map(|(name, pin, salt, p)| {
+            let k = npw_crypto::pin::derive_key(pin, &salt, &p).unwrap();
+            assert_eq!(k.as_bytes(), &reference::argon2id(pin, &salt, &p), "{name}");
+            PinKeyVector {
+                name: name.into(),
+                pin: pin.into(),
+                pin_nfkd_hex: h(kdf::normalize_password(pin).as_bytes()),
+                salt_hex: h(&salt),
+                params: p,
+                pin_key_hex: h(k.as_bytes()),
+            }
+        })
+        .collect();
+
+    let account = uuid16(ACCOUNT_ID);
+    let a = aad::pin_unlock(&account);
+    let wraps: Vec<WrapCase> = vec![
+        (
+            "AK (= npw-core compat v1.0) under pin_key[0]",
+            unh(&pin_key[0].pin_key_hex),
+            vec![0x50; 24],
+            vec![2; 32],
+        ),
+        (
+            "another AK under pin_key[4]",
+            unh(&pin_key[4].pin_key_hex),
+            seq(0x60, 24),
+            seq(0xc0, 32),
+        ),
+    ];
+    let pin_wrap: Vec<EnvelopeVector> = wraps
+        .into_iter()
+        .map(|(name, k, n, pt)| EnvelopeVector {
+            name: name.into(),
+            envelope_hex: h(&envelope::seal_with_nonce(
+                &Key32::from_slice(&k).unwrap(),
+                &n.clone().try_into().unwrap(),
+                &pt,
+                &a,
+            )),
+            key_hex: h(&k),
+            nonce_hex: h(&n),
+            aad_hex: h(&a),
+            plaintext_hex: h(&pt),
+        })
+        .collect();
+
+    let base = &pin_wrap[0];
+    let env = unh(&base.envelope_hex);
+    let bad: Vec<(&str, String, Vec<u8>)> = vec![
+        (
+            "wrong PIN (pin_key[2])",
+            pin_key[2].pin_key_hex.clone(),
+            a.clone(),
+        ),
+        (
+            "another account",
+            base.key_hex.clone(),
+            aad::pin_unlock(&uuid16(VAULT_ID)),
+        ),
+        (
+            "the quick-unlock label instead of the PIN label",
+            base.key_hex.clone(),
+            aad::quick_unlock(&account),
+        ),
+    ];
+    let pin_wrap_invalid = bad
+        .into_iter()
+        .map(|(name, k, aad_bytes)| InvalidCiphertext {
+            error: error_kind(&envelope::open(&key(&k), &env, &aad_bytes).expect_err(name)),
+            name: name.into(),
+            key_hex: k,
+            aad_hex: h(&aad_bytes),
+            data_hex: h(&env),
+        })
+        .collect();
+
+    PinVectors {
+        version: 1,
+        note:
+            "NyaPassword PIN unlock test vectors (docs/加密规格.md §4.4). Binary values are hex. \
+               Frozen once PIN unlock is released: never edit, only add a new file."
+                .into(),
+        aad: vec![AadVector {
+            function: "pin_unlock".into(),
+            label: "npw/pin-unlock/v1".into(),
+            ids: vec![ACCOUNT_ID.into()],
+            format_major: None,
+            name: None,
+            hex: h(&a),
+        }],
+        pin_key,
+        pin_wrap,
+        pin_wrap_invalid,
+    }
+}
+
+fn check_pin(v: &PinVectors) {
+    assert_eq!(v.version, 1);
+    for a in &v.aad {
+        let got = aad_of(&a.function, &a.ids, a.format_major, a.name.as_deref());
+        assert_eq!(h(&got), a.hex, "{}", a.function);
+        let mut want = a.label.as_bytes().to_vec();
+        for id in &a.ids {
+            want.extend_from_slice(&uuid16(id));
+        }
+        assert_eq!(h(&want), a.hex, "{}", a.function);
+    }
+    for k in &v.pin_key {
+        let salt = unh(&k.salt_hex);
+        assert_eq!(
+            h(kdf::normalize_password(&k.pin).as_bytes()),
+            k.pin_nfkd_hex,
+            "{}",
+            k.name
+        );
+        let got = npw_crypto::pin::derive_key(&k.pin, &salt, &k.params).unwrap();
+        assert_eq!(h(got.as_bytes()), k.pin_key_hex, "{}", k.name);
+        assert_eq!(
+            h(&reference::argon2id(&k.pin, &salt, &k.params)),
+            k.pin_key_hex,
+            "{}",
+            k.name
+        );
+    }
+    // NFKD: full-width digits are the same PIN
+    assert_eq!(v.pin_key[0].pin_key_hex, v.pin_key[1].pin_key_hex);
+    assert_ne!(v.pin_key[0].pin, v.pin_key[1].pin);
+    let account = uuid16(ACCOUNT_ID);
+    for e in &v.pin_wrap {
+        let k = key(&e.key_hex);
+        let nonce: [u8; 24] = unh(&e.nonce_hex).try_into().unwrap();
+        let (a, pt, env) = (unh(&e.aad_hex), unh(&e.plaintext_hex), unh(&e.envelope_hex));
+        assert_eq!(a, aad::pin_unlock(&account), "{}", e.name);
+        assert_eq!(
+            envelope::seal_with_nonce(&k, &nonce, &pt, &a),
+            env,
+            "{}",
+            e.name
+        );
+        assert_eq!(
+            reference::envelope_seal(&unh(&e.key_hex), &nonce, &a, &pt),
+            env,
+            "{}",
+            e.name
+        );
+        assert_eq!(
+            npw_crypto::pin::unwrap(&k, &env, &account)
+                .unwrap()
+                .as_bytes()[..],
+            pt[..],
+            "{}",
+            e.name
+        );
+    }
+    for e in &v.pin_wrap_invalid {
+        let r = envelope::open(&key(&e.key_hex), &unh(&e.data_hex), &unh(&e.aad_hex));
+        assert_eq!(error_kind(&r.expect_err(&e.name)), e.error, "{}", e.name);
+    }
+}
+
+#[test]
+fn frozen_pin_vectors() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("vectors")
+        .join("pin-v1.json");
+    if std::env::var("NPW_BLESS_PIN").is_ok() {
+        let json = serde_json::to_string_pretty(&gen_pin()).unwrap() + "\n";
+        std::fs::write(&path, json).unwrap();
+    }
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|_| panic!("{} missing (NPW_BLESS_PIN=1 generates it)", path.display()));
+    let v: PinVectors = serde_json::from_str(&text).unwrap();
+    check_pin(&v);
+}
+
 // ------------------------------------------------------------------ the specification, re-implemented
 
 mod reference {
@@ -968,6 +1211,20 @@ mod reference {
         let k_sk = hkdf32(Some(salt), sk, b"npw/sk/v1");
         let m: [u8; 32] = std::array::from_fn(|i| k_pw[i] ^ k_sk[i]);
         (k_pw, k_sk, m)
+    }
+
+    /// Argon2id of NFKD(text): the PIN key of §4.4 (and K_pw of §2).
+    pub fn argon2id(text: &str, salt: &[u8], p: &KdfParams) -> [u8; 32] {
+        let t: String = text.nfkd().collect();
+        let mut out = [0u8; 32];
+        Argon2::new(
+            Algorithm::Argon2id,
+            Version::V0x13,
+            Params::new(p.m, p.t, p.p, Some(32)).unwrap(),
+        )
+        .hash_password_into(t.as_bytes(), salt, &mut out)
+        .unwrap();
+        out
     }
 
     /// (AUK, LOGIN) from M: HKDF with an empty salt.

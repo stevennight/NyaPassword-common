@@ -283,7 +283,7 @@ impl Client {
             .ok_or(CoreError::NotSignedIn)
     }
 
-    fn seal_device(&self, name: &str, data: &[u8]) -> Vec<u8> {
+    pub(crate) fn seal_device(&self, name: &str, data: &[u8]) -> Vec<u8> {
         envelope::seal(&self.device_key, data, &aad::device_secret(name))
     }
 
@@ -343,7 +343,7 @@ impl Client {
         Ok(())
     }
 
-    fn check_kdf(&self, p: &KdfParams) -> Result<()> {
+    pub(crate) fn check_kdf(&self, p: &KdfParams) -> Result<()> {
         if self.cfg.allow_weak_kdf {
             return Ok(());
         }
@@ -856,14 +856,20 @@ impl Client {
     pub fn unlock_with_key(&self, key: &[u8]) -> Result<()> {
         let acc = self.account()?;
         let ak = Key32::from_slice(key)?;
-        // prove the key is right: it must open the account's private key
+        self.check_account_key(&acc, &ak)?;
+        self.finish_unlock(ak, None)
+    }
+
+    /// Proves a candidate AK is this account's: it must open the account's
+    /// private key. [`CoreError::WrongPassword`] otherwise.
+    pub(crate) fn check_account_key(&self, acc: &AccountState, ak: &Key32) -> Result<()> {
         envelope::open(
-            &ak,
+            ak,
             &d64(&acc.encrypted_private_key)?,
             &aad::account_private_key(&uuid_bytes(&acc.account_id)?),
         )
-        .map_err(|_| CoreError::WrongPassword)?;
-        self.finish_unlock(ak, None)
+        .map(|mut plain| plain.zeroize())
+        .map_err(|_| CoreError::WrongPassword)
     }
 
     /// Checks that `key` (from a host's biometric quick-unlock store) is this
@@ -876,16 +882,10 @@ impl Client {
         }
         let acc = self.account()?;
         let ak = Key32::from_slice(key)?;
-        envelope::open(
-            &ak,
-            &d64(&acc.encrypted_private_key)?,
-            &aad::account_private_key(&uuid_bytes(&acc.account_id)?),
-        )
-        .map(|mut plain| plain.zeroize())
-        .map_err(|_| CoreError::WrongPassword)
+        self.check_account_key(&acc, &ak)
     }
 
-    fn finish_unlock(&self, ak: Key32, login: Option<Key32>) -> Result<()> {
+    pub(crate) fn finish_unlock(&self, ak: Key32, login: Option<Key32>) -> Result<()> {
         let acc = self.account()?;
         let mut vault_keys = HashMap::new();
         for v in &acc.vaults {

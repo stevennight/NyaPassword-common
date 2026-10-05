@@ -69,6 +69,11 @@ pub fn quick_unlock(account_id: &[u8; 16]) -> Vec<u8> {
     build("npw/quick-unlock/v1", &[account_id], &[])
 }
 
+/// The account key wrapped under a PIN key on one device (`pin.rs`).
+pub fn pin_unlock(account_id: &[u8; 16]) -> Vec<u8> {
+    build("npw/pin-unlock/v1", &[account_id], &[])
+}
+
 /// Native encrypted exports.
 pub fn export(export_id: &[u8; 16]) -> Vec<u8> {
     build("npw/export/v1", &[export_id], &[])

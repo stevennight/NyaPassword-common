@@ -334,6 +334,30 @@ fn against_a_server() {
     assert_eq!(code(a.verify_key(k.clone()).unwrap_err()), "locked");
     a.unlock_with_key(k).unwrap();
 
+    // PIN: wrap while unlocked, then verify / unlock; wrong PINs are wrong_password
+    assert_eq!(code(a.pin_wrap("123".into()).unwrap_err()), "invalid");
+    let blob = a.pin_wrap("2580".into()).unwrap();
+    a.verify_pin(blob.clone(), "2580".into()).unwrap();
+    assert_eq!(
+        code(a.verify_pin(blob.clone(), "0000".into()).unwrap_err()),
+        "wrong_password"
+    );
+    a.lock();
+    assert_eq!(
+        code(a.verify_pin(blob.clone(), "2580".into()).unwrap_err()),
+        "locked"
+    );
+    assert_eq!(
+        code(a.unlock_with_pin(blob.clone(), "0000".into()).unwrap_err()),
+        "wrong_password"
+    );
+    assert_eq!(
+        code(a.unlock_with_pin("{}".into(), "2580".into()).unwrap_err()),
+        "invalid"
+    );
+    a.unlock_with_pin(blob, "2580".into()).unwrap();
+    assert!(a.is_unlocked());
+
     // the item flag reaches the host in every view
     let mut guarded: serde_json::Value =
         serde_json::from_str(&a.item(vault.clone(), id.clone()).unwrap()).unwrap();

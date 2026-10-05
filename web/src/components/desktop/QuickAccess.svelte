@@ -31,7 +31,9 @@
   let pending = $state<{ it: ItemView; what: 'type' | 'password' | 'totp' } | null>(null);
   let vpw = $state('');
   let vinput = $state<HTMLInputElement | null>(null);
-  let bio = $state({ biometric: false, label: '' });
+  let bio = $state<{ biometric: boolean; label: string; pin?: boolean }>({ biometric: false, label: '' });
+  /** The field takes the PIN instead of the master password. */
+  let usePin = $state(false);
 
   const list = $derived(q.trim() ? results : (ctx?.matches ?? []));
   const current = $derived(list[Math.min(sel, list.length - 1)] ?? null);
@@ -46,9 +48,10 @@
     busy = false;
     pending = null;
     vpw = '';
+    usePin = false;
     ctx = await invoke<QuickContext>('quick_context');
     bio = ctx.unlocked
-      ? await invoke<{ biometric: boolean; label: string }>('verify_user_options').catch(() => ({ biometric: false, label: '' }))
+      ? await invoke<{ biometric: boolean; label: string; pin?: boolean }>('verify_user_options').catch(() => ({ biometric: false, label: '' }))
       : { biometric: false, label: '' };
     await tick();
     input?.focus();
@@ -78,17 +81,22 @@
     vinput?.focus();
   }
 
-  /** Verifies for the pending item (password, or Windows Hello without one), then runs its action. */
+  /** Verifies for the pending item (password or PIN, or Windows Hello without one), then runs its action. */
   async function verify(pw?: string) {
     if (!pending || busy) return;
     const { it, what } = pending;
     busy = true;
     msg = '';
     try {
-      await invoke('quick_verify', { vaultId: it.vault_id, itemId: it.item_id, password: pw || null });
+      const secret = usePin ? { password: null, pin: pw || null } : { password: pw || null, pin: null };
+      await invoke('quick_verify', { vaultId: it.vault_id, itemId: it.item_id, ...secret });
     } catch (e) {
       const o = e as { code?: string } | null;
       msg = o?.code === 'wrong_password' ? '主密码不正确' : errText(e);
+      if (usePin && (o?.code === 'pin_wiped' || o?.code === 'password_required')) {
+        usePin = false;
+        bio = { ...bio, pin: false };
+      }
       busy = false;
       vinput?.select();
       return;
@@ -178,10 +186,11 @@
   {:else if pending}
     <div class="verify">
       <div class="row"><span>🔒</span><b class="grow">{pending.it.title || '（无标题）'}</b></div>
-      <p class="muted small">这个条目设置了“使用前需要验证”。{pending.what === 'type' ? '自动输入' : pending.what === 'password' ? '复制密码' : '复制验证码'}前，请输入主密码{bio.biometric ? `或使用 ${bio.label}` : ''}。</p>
-      <input class="search" type="password" bind:this={vinput} bind:value={vpw} placeholder="主密码（Enter 验证，Esc 返回）" autocomplete="off" disabled={busy} />
+      <p class="muted small">这个条目设置了“使用前需要验证”。{pending.what === 'type' ? '自动输入' : pending.what === 'password' ? '复制密码' : '复制验证码'}前，请输入主密码{bio.pin ? '或 PIN' : ''}{bio.biometric ? `或使用 ${bio.label}` : ''}。</p>
+      <input class="search" type="password" bind:this={vinput} bind:value={vpw} placeholder={usePin ? 'PIN（Enter 验证，Esc 返回）' : '主密码（Enter 验证，Esc 返回）'} autocomplete="off" disabled={busy} />
       <div class="row">
         <button class="btn sm primary" disabled={busy || !vpw} onclick={() => verify(vpw)}>{busy ? '验证中…' : '验证'}</button>
+        {#if bio.pin}<button class="btn sm" disabled={busy} onclick={() => { usePin = !usePin; vpw = ''; msg = ''; vinput?.focus(); }}>{usePin ? '改用主密码' : '使用 PIN'}</button>{/if}
         {#if bio.biometric}<button class="btn sm" disabled={busy} onclick={() => verify()}>使用 {bio.label}</button>{/if}
         <span class="spacer"></span>
         <button class="btn sm" disabled={busy} onclick={() => { pending = null; msg = ''; }}>返回</button>

@@ -244,6 +244,23 @@ impl NpwClient {
         Ok(self.inner.verify_key(&key)?)
     }
 
+    /// Wraps the account key under a new PIN (at least 4 characters). Only
+    /// while unlocked. Returns the `PinBlob` JSON, which the host keeps
+    /// encrypted by its Keystore key and never sends anywhere.
+    pub fn pin_wrap(&self, pin: String) -> Res<String> {
+        to_json(&self.inner.pin_wrap(&pin)?)
+    }
+
+    /// Unlocks with the PIN; a wrong PIN is `wrong_password` (the host counts tries).
+    pub fn unlock_with_pin(&self, blob: String, pin: String) -> Res<()> {
+        Ok(self.inner.unlock_with_pin(&from_json(&blob)?, &pin)?)
+    }
+
+    /// Checks the PIN without changing the lock state (user verification). Only while unlocked.
+    pub fn verify_pin(&self, blob: String, pin: String) -> Res<()> {
+        Ok(self.inner.verify_pin(&from_json(&blob)?, &pin)?)
+    }
+
     /// Forgets all keys and decrypted data.
     pub fn lock(&self) {
         self.inner.lock();

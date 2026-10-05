@@ -88,6 +88,27 @@ pub fn normalize_password(password: &str) -> String {
     password.nfkd().collect()
 }
 
+/// Argon2id (v0x13, 32-byte output, no secret / associated data) of the UTF-8
+/// bytes of NFKD(`text`). The salt must be at least 16 bytes. Shared by the
+/// master password and the PIN (`pin.rs`).
+pub(crate) fn argon2id_nfkd(text: &str, salt: &[u8], params: &KdfParams) -> Result<[u8; 32]> {
+    if salt.len() < 16 {
+        return Err(CryptoError::InvalidKdfParams);
+    }
+    let mut input = normalize_password(text).into_bytes();
+    let argon = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(params.m, params.t, params.p, Some(32))
+            .map_err(|_| CryptoError::InvalidKdfParams)?,
+    );
+    let mut out = [0u8; 32];
+    let r = argon.hash_password_into(&input, salt, &mut out);
+    input.zeroize();
+    r.map_err(|_| CryptoError::InvalidKdfParams)?;
+    Ok(out)
+}
+
 /// Derives the master keys. Does not check `params` against the minimums: callers
 /// that got the parameters from a server must call [`KdfParams::validate`] first
 /// (npw-core always does, unless a test configuration turns it off).
@@ -97,21 +118,7 @@ pub fn derive_master(
     account_salt: &[u8],
     params: &KdfParams,
 ) -> Result<MasterKeys> {
-    if account_salt.len() < 16 {
-        return Err(CryptoError::InvalidKdfParams);
-    }
-    let mut pw = normalize_password(password).into_bytes();
-    let argon = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(params.m, params.t, params.p, Some(32))
-            .map_err(|_| CryptoError::InvalidKdfParams)?,
-    );
-    let mut k_pw = [0u8; 32];
-    argon
-        .hash_password_into(&pw, account_salt, &mut k_pw)
-        .map_err(|_| CryptoError::InvalidKdfParams)?;
-    pw.zeroize();
+    let mut k_pw = argon2id_nfkd(password, account_salt, params)?;
 
     let mut k_sk = [0u8; 32];
     Hkdf::<Sha256>::new(Some(account_salt), secret_key.raw())

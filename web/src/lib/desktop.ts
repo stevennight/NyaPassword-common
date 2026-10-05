@@ -108,6 +108,13 @@ export interface DesktopApi {
   removePairing(id: string): Promise<DesktopSettings>;
   /** Rejects with a message when an auto-type sequence is not valid. */
   checkAutoType(sequence: string): Promise<void>;
+  /** Unlocks with the PIN; rejects with `wrong_pin` (message: tries left), `pin_wiped`, `password_required`. */
+  pinUnlock(pin: string): Promise<void>;
+  /** Sets or changes the PIN (at least 4 characters; while unlocked). */
+  setPin(pin: string): Promise<void>;
+  removePin(): Promise<void>;
+  /** "启动时可直接用生物识别解锁". */
+  setBiometricAtStart(enabled: boolean): Promise<void>;
 }
 
 export function desktopApi(bridge: Bridge): DesktopApi | null {

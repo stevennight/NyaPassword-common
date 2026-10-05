@@ -44,6 +44,8 @@ class VaultState {
   autoLockMinutes = $state(10);
   /** The item verified for "使用前需要验证" (`itemKey`), while it stays open. */
   verified = $state<string | null>(null);
+  /** Desktop: a browser extension waits for this app to be unlocked (its browser's name). */
+  unlockRequest = $state('');
 
   private ws: WebSocket | null = null;
   private syncTimer: ReturnType<typeof setInterval> | undefined;
@@ -167,9 +169,9 @@ class VaultState {
     return gated(item, this.verified);
   }
 
-  /** Verifies the user (master password, or biometrics without one) for this item. */
-  async verify(vaultId: string, itemId: string, password?: string) {
-    await this.bridge.verifyUser(password);
+  /** Verifies the user (master password, PIN, or biometrics without either) for this item. */
+  async verify(vaultId: string, itemId: string, password?: string, pin?: string) {
+    await this.bridge.verifyUser(password, pin);
     this.verified = itemKey(vaultId, itemId);
   }
 

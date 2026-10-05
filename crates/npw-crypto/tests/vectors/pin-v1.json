@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "note": "NyaPassword PIN unlock test vectors (docs/加密规格.md §4.4). Binary values are hex. Frozen once PIN unlock is released: never edit, only add a new file.",
+  "aad": [
+    {
+      "function": "pin_unlock",
+      "label": "npw/pin-unlock/v1",
+      "ids": [
+        "0192f0c0-0000-7000-8000-000000000001"
+      ],
+      "hex": "6e70772f70696e2d756e6c6f636b2f76310192f0c0000070008000000000000001"
+    }
+  ],
+  "pin_key": [
+    {
+      "name": "four digits, test parameters",
+      "pin": "1234",
+      "pin_nfkd_hex": "31323334",
+      "salt_hex": "303132333435363738393a3b3c3d3e3f",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "pin_key_hex": "2f50349a2689dd756c80ef7cc7b160d844febeee3ef8e96f1da51d11454ae939"
+    },
+    {
+      "name": "full-width digits fold to the same key as pin_key[0]",
+      "pin": "１２３４",
+      "pin_nfkd_hex": "31323334",
+      "salt_hex": "303132333435363738393a3b3c3d3e3f",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "pin_key_hex": "2f50349a2689dd756c80ef7cc7b160d844febeee3ef8e96f1da51d11454ae939"
+    },
+    {
+      "name": "any characters: CJK, space, punctuation",
+      "pin": "猫 pin!",
+      "pin_nfkd_hex": "e78cab2070696e21",
+      "salt_hex": "909192939495969798999a9b9c9d9e9f",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "pin_key_hex": "3aa2e569665b262e5f535164a27ccdeca8ad3d704a58c26bd3bd2e1144db9407"
+    },
+    {
+      "name": "six digits, 32-byte salt",
+      "pin": "000000",
+      "pin_nfkd_hex": "303030303030",
+      "salt_hex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+      "params": {
+        "alg": "argon2id",
+        "m": 256,
+        "t": 1,
+        "p": 1
+      },
+      "pin_key_hex": "374054789534a98510269a579dfcc188387d74c437dc558eaaaa4f35b3765c48"
+    },
+    {
+      "name": "the lowest accepted parameters (16 MiB, t=1, p=1)",
+      "pin": "2580",
+      "pin_nfkd_hex": "32353830",
+      "salt_hex": "303132333435363738393a3b3c3d3e3f",
+      "params": {
+        "alg": "argon2id",
+        "m": 16384,
+        "t": 1,
+        "p": 1
+      },
+      "pin_key_hex": "ccbe92819734f40cd18f9408017e6dccd4076bcd9f77993fa9b3c6cfa0763f5c"
+    }
+  ],
+  "pin_wrap": [
+    {
+      "name": "AK (= npw-core compat v1.0) under pin_key[0]",
+      "key_hex": "2f50349a2689dd756c80ef7cc7b160d844febeee3ef8e96f1da51d11454ae939",
+      "nonce_hex": "505050505050505050505050505050505050505050505050",
+      "aad_hex": "6e70772f70696e2d756e6c6f636b2f76310192f0c0000070008000000000000001",
+      "plaintext_hex": "0202020202020202020202020202020202020202020202020202020202020202",
+      "envelope_hex": "0101505050505050505050505050505050505050505050505050d1f98582d69f5931dc2a2b9f8cb7cf877ddf6bd921729d12d5e1c22601553234a43155e0b0ec71b5e04e677aef5b786a"
+    },
+    {
+      "name": "another AK under pin_key[4]",
+      "key_hex": "ccbe92819734f40cd18f9408017e6dccd4076bcd9f77993fa9b3c6cfa0763f5c",
+      "nonce_hex": "606162636465666768696a6b6c6d6e6f7071727374757677",
+      "aad_hex": "6e70772f70696e2d756e6c6f636b2f76310192f0c0000070008000000000000001",
+      "plaintext_hex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "envelope_hex": "0101606162636465666768696a6b6c6d6e6f7071727374757677ece253ce28a86f394a634b8f2e27064dc2e91d7d83e4c1df7083b868229b4cb288d32524de9e7007c88b1952070e72c0"
+    }
+  ],
+  "pin_wrap_invalid": [
+    {
+      "name": "wrong PIN (pin_key[2])",
+      "key_hex": "3aa2e569665b262e5f535164a27ccdeca8ad3d704a58c26bd3bd2e1144db9407",
+      "aad_hex": "6e70772f70696e2d756e6c6f636b2f76310192f0c0000070008000000000000001",
+      "data_hex": "0101505050505050505050505050505050505050505050505050d1f98582d69f5931dc2a2b9f8cb7cf877ddf6bd921729d12d5e1c22601553234a43155e0b0ec71b5e04e677aef5b786a",
+      "error": "decrypt"
+    },
+    {
+      "name": "another account",
+      "key_hex": "2f50349a2689dd756c80ef7cc7b160d844febeee3ef8e96f1da51d11454ae939",
+      "aad_hex": "6e70772f70696e2d756e6c6f636b2f76310192f0c0000070008000000000000002",
+      "data_hex": "0101505050505050505050505050505050505050505050505050d1f98582d69f5931dc2a2b9f8cb7cf877ddf6bd921729d12d5e1c22601553234a43155e0b0ec71b5e04e677aef5b786a",
+      "error": "decrypt"
+    },
+    {
+      "name": "the quick-unlock label instead of the PIN label",
+      "key_hex": "2f50349a2689dd756c80ef7cc7b160d844febeee3ef8e96f1da51d11454ae939",
+      "aad_hex": "6e70772f717569636b2d756e6c6f636b2f76310192f0c0000070008000000000000001",
+      "data_hex": "0101505050505050505050505050505050505050505050505050d1f98582d69f5931dc2a2b9f8cb7cf877ddf6bd921729d12d5e1c22601553234a43155e0b0ec71b5e04e677aef5b786a",
+      "error": "decrypt"
+    }
+  ]
+}
