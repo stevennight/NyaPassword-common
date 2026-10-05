@@ -15,6 +15,7 @@
 | 银行卡：卡号、持卡人、月 / 年下拉框、CVV | checkout.html | 通过 |
 | 收货地址：收货人、手机、省份下拉框、市、区、详细地址、邮编 | checkout.html | 通过 |
 | 打开页面时自动填写：默认关闭；打开后只填唯一匹配 | login.html | 通过 |
+| 嵌入的其他网站登录框（跨站 iframe）：不自动弹出；手动打开时菜单有警告 | framed.html | 通过 |
 
 单元测试（`chrome/src/lib/forms.test.ts`）另外覆盖：autocomplete 优先、注册表单、搜索框 / 图形验证码排除、只有用户名的第一步、DOM clobbering（名为 `action` 的控件）、登录表单里标成 `new-password` 的密码框、单个地址框填完整地址。
 
@@ -44,7 +45,7 @@
 
 可测的 15 个全部识别（100%）。
 
-**未验证**（需要真实账户、手动做）：上述网站的实际填写与提交、保存提示；passkey 在 webauthn.io、GitHub、Google、Microsoft 上的注册 / 登录；各银行网银；路由器管理页；跨域 iframe 登录的提示。
+**未验证**（需要真实账户、手动做）：上述网站的实际填写与提交、保存提示；passkey 在 webauthn.io、GitHub、Google、Microsoft 上的注册 / 登录；各银行网银；路由器管理页。
 
 ## Android
 

@@ -246,6 +246,62 @@ impl NpwClient {
         to_js(&self.inner.autofill_candidates(target).map_err(js_err)?)
     }
 
+    /// `caller`: `{kind: "web", origin}` — the origin as the browser reported it for the frame.
+    #[wasm_bindgen(js_name = passkeyCandidates)]
+    pub fn passkey_candidates(
+        &self,
+        caller: JsValue,
+        request_json: &str,
+    ) -> Result<JsValue, JsValue> {
+        let caller: npw_core::passkeys::PasskeyCaller = from_js(caller)?;
+        to_js(
+            &self
+                .inner
+                .passkey_candidates(&caller, request_json)
+                .map_err(js_err)?,
+        )
+    }
+
+    #[wasm_bindgen(js_name = passkeyCreate)]
+    pub fn passkey_create(
+        &self,
+        caller: JsValue,
+        request_json: &str,
+        target_vault: Option<String>,
+        target_item: Option<String>,
+        vault_id: &str,
+    ) -> Result<JsValue, JsValue> {
+        let caller: npw_core::passkeys::PasskeyCaller = from_js(caller)?;
+        let target = match (&target_vault, &target_item) {
+            (Some(v), Some(i)) => Some((v.as_str(), i.as_str())),
+            _ => None,
+        };
+        to_js(
+            &self
+                .inner
+                .passkey_create(&caller, request_json, target, vault_id)
+                .map_err(js_err)?,
+        )
+    }
+
+    #[wasm_bindgen(js_name = passkeyGet)]
+    pub fn passkey_get(
+        &self,
+        caller: JsValue,
+        request_json: &str,
+        vault_id: &str,
+        item_id: &str,
+        passkey_id: &str,
+    ) -> Result<JsValue, JsValue> {
+        let caller: npw_core::passkeys::PasskeyCaller = from_js(caller)?;
+        to_js(
+            &self
+                .inner
+                .passkey_get(&caller, request_json, vault_id, item_id, passkey_id)
+                .map_err(js_err)?,
+        )
+    }
+
     #[wasm_bindgen(js_name = itemHistory)]
     pub async fn item_history(
         &self,
@@ -519,6 +575,12 @@ pub fn new_short_id(prefix: &str) -> String {
 #[wasm_bindgen(js_name = displayHost)]
 pub fn display_host(url: &str) -> String {
     npw_match::display_host(url)
+}
+
+/// The site (registrable domain) of a URL; equal sites may share prompts and fills.
+#[wasm_bindgen(js_name = siteOf)]
+pub fn site_of(url: &str) -> String {
+    npw_match::site(url)
 }
 
 /// Parses a Secret Key, returning its canonical text form (throws on typos).

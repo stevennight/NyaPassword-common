@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>嵌入的登录框 · 测试站点</title></head>
+<body>
+  <!-- A page that embeds another site's login form (?src=<url>). The
+       extension must warn in the menu and never open / fill it by itself. -->
+  <h3>这个页面嵌入了另一个网站的登录框</h3>
+  <iframe id="login" width="420" height="420" style="border:1px solid #ccd"></iframe>
+  <script>document.getElementById('login').src = new URLSearchParams(location.search).get('src') || 'about:blank';</script>
+</body>
+</html>

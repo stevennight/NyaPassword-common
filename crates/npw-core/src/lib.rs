@@ -13,6 +13,7 @@ pub mod client;
 pub mod generator;
 pub mod health;
 mod items;
+pub mod passkeys;
 mod remote;
 pub mod search;
 pub mod security;

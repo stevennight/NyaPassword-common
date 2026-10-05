@@ -76,7 +76,25 @@ function browserName(): string {
   return `${b}${os ? ' · ' + os : ''}`;
 }
 
-export async function createBridge(): Promise<Bridge> {
+export interface WasmBridgeOptions {
+  /** Device name shown in the account's device list. */
+  deviceName?: string;
+  platform?: string;
+  /** Always persist the replica (the extension), instead of following the sign-in choice. */
+  alwaysRemember?: boolean;
+}
+
+/** The underlying client, for hosts that need more than the Bridge (the extension's service worker). */
+export function wasmClient(): npw.NpwClient {
+  return client;
+}
+
+/** Persists the replica soon if it changed (hosts calling the client directly use this). */
+export function persistReplica() {
+  persistSoon();
+}
+
+export async function createBridge(opts: WasmBridgeOptions = {}): Promise<Bridge> {
   await init();
   let deviceKey = await idbGet<Uint8Array>('device_key');
   if (!deviceKey) {
@@ -84,8 +102,8 @@ export async function createBridge(): Promise<Bridge> {
     await idbPut('device_key', deviceKey);
   }
   const snapshot = (await idbGet<Uint8Array>('snapshot')) ?? new Uint8Array();
-  remember = snapshot.length > 0;
-  client = new npw.NpwClient(`网页版 · ${browserName()}`, 'web', __APP_VERSION__, locale(), deviceKey, snapshot);
+  remember = opts.alwaysRemember || snapshot.length > 0;
+  client = new npw.NpwClient(opts.deviceName ?? `网页版 · ${browserName()}`, opts.platform ?? 'web', __APP_VERSION__, locale(), deviceKey, snapshot);
   savedGeneration = client.generation();
 
   const bridge: Bridge = {
@@ -98,7 +116,7 @@ export async function createBridge(): Promise<Bridge> {
       return mut(client.register(server, login, password, invite || undefined));
     },
     signIn: async (server, login, password, secretKey, rem) => {
-      remember = rem;
+      remember = rem || !!opts.alwaysRemember;
       await mut(client.signIn(server, login, password, secretKey));
       if (!rem) await idbPut('snapshot', undefined);
     },
@@ -107,7 +125,7 @@ export async function createBridge(): Promise<Bridge> {
     signOut: async (force) => {
       await client.signOut(force);
       await idbPut('snapshot', undefined);
-      remember = false;
+      remember = !!opts.alwaysRemember;
     },
     emergencyKit: async () => client.emergencyKit(),
 

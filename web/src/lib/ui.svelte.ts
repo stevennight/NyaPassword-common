@@ -41,7 +41,7 @@ export function avatar(title: string, template: string): { letter: string; color
   const letter = [...t][0]?.toUpperCase() ?? '?';
   let h = 0;
   for (const c of t + template) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return { letter, color: palette[h % palette.length] };
+  return { letter, color: palette[h % palette.length] ?? '#3d63f5' };
 }
 
 export const TEMPLATE_ICONS: Record<string, string> = {

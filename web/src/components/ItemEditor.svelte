@@ -125,6 +125,7 @@
   }
 
   const secretKinds = ['concealed', 'pin'];
+  const ADDRESS_PARTS: [string, string][] = [['province', '省'], ['city', '市'], ['district', '区'], ['street', '详细地址'], ['postal_code', '邮编'], ['country', '国家']];
 </script>
 
 <svelte:window onkeydown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); void save(); } if (e.key === 'Escape' && !genFor && !showAdd) void cancel(); }} />
@@ -153,7 +154,7 @@
               {#if f.kind === 'address'}
                 {@const a = (f.value && typeof f.value === 'object' ? f.value : {}) as Record<string, string>}
                 <div class="addr">
-                  {#each [['province', '省'], ['city', '市'], ['district', '区'], ['street', '详细地址'], ['postal_code', '邮编'], ['country', '国家']] as [k, l] (k)}
+                  {#each ADDRESS_PARTS as [k, l] (k)}
                     <input class="input" placeholder={l} value={a[k] ?? ''} oninput={(e) => { f.value = { ...a, [k]: (e.target as HTMLInputElement).value }; mark(); }} />
                   {/each}
                 </div>

@@ -19,6 +19,7 @@ npw-match.workspace = true
 npw-otp.workspace = true
 npw-import.workspace = true
 npw-export.workspace = true
+npw-passkey.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

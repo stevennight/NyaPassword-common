@@ -206,7 +206,10 @@ pub fn matches(stored: &str, mode: &str, target: &Target, eq: &Equivalents) -> O
                     if sd == sh && !sh.contains('.') || sh.parse::<std::net::IpAddr>().is_ok() {
                         return None;
                     }
-                    if sd == td && !(ss == "https" && ts == "http") {
+                    if ss == "https" && ts == "http" {
+                        return None; // also for equivalent domains
+                    }
+                    if sd == td {
                         return Some(Quality::Domain);
                     }
                     if eq.equivalent(sd, td) {
@@ -232,6 +235,35 @@ pub fn best_match<'a>(
 }
 
 /// The text shown for a URL in lists: the host (or package).
+/// The site a URL belongs to: its registrable domain (eTLD+1 from the public
+/// suffix list), or the host for IPs, `localhost` and single labels; the
+/// package for apps. Two pages are "the same site" when this is equal.
+pub fn site(input: &str) -> String {
+    match parse(input) {
+        Some(Target::Web { domain, .. }) => domain,
+        Some(Target::App { package }) => package,
+        None => input.trim().to_lowercase(),
+    }
+}
+
+#[cfg(test)]
+mod site_tests {
+    use super::site;
+
+    #[test]
+    fn site_uses_the_public_suffix_list() {
+        assert_eq!(site("https://a.b.example.com.cn/x"), "example.com.cn");
+        assert_eq!(site("https://user.github.io/"), "user.github.io");
+        assert_eq!(site("https://login.example.co.uk"), "example.co.uk");
+        assert_eq!(site("http://192.168.1.1:8080/"), "192.168.1.1");
+        assert_eq!(site("http://localhost:3000"), "localhost");
+        assert_ne!(
+            site("https://evil-example.com.cn"),
+            site("https://example.com.cn")
+        );
+    }
+}
+
 pub fn display_host(input: &str) -> String {
     match parse(input) {
         Some(Target::Web {
@@ -364,6 +396,33 @@ mod tests {
     }
 
     #[test]
+    fn equivalent_domains_keep_the_https_rule() {
+        let eq = Equivalents::with_builtin(&[vec!["example.com".into(), "example.org".into()]]);
+        // a login saved for https is never suggested on a plain http page of another host
+        for (stored, target) in [
+            ("https://taobao.com", "http://tmall.com"),
+            ("https://www.taobao.com", "http://login.tmall.com/"),
+            ("https://example.com", "http://example.org"),
+        ] {
+            assert_eq!(
+                matches(stored, "domain", &t(target), &eq),
+                None,
+                "{stored} on {target}"
+            );
+        }
+        // http → https is fine (an upgrade)
+        assert_eq!(
+            matches("http://taobao.com", "domain", &t("https://tmall.com"), &eq),
+            Some(Quality::Equivalent)
+        );
+        // same host stays a host match regardless of scheme (documented)
+        assert_eq!(
+            matches("https://taobao.com", "domain", &t("http://taobao.com"), &eq),
+            Some(Quality::Host)
+        );
+    }
+
+    #[test]
     fn other_modes_and_equivalents() {
         let eq = Equivalents::with_builtin(&[vec!["example.com".into(), "example.org".into()]]);
         assert_eq!(
@@ -380,6 +439,15 @@ mod tests {
                 "https://example.com",
                 "domain",
                 &t("https://example.org"),
+                &eq
+            ),
+            Some(Quality::Equivalent)
+        );
+        assert_eq!(
+            matches(
+                "http://www.taobao.com",
+                "domain",
+                &t("http://login.tmall.com"),
                 &eq
             ),
             Some(Quality::Equivalent)

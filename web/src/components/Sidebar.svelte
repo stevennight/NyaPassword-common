@@ -12,7 +12,7 @@
   // nested tags: "工作/开发" shows under "工作"
   const tagTree = $derived.by(() => {
     const roots = new Set<string>();
-    for (const t of vault.tags) roots.add(t.split('/')[0]);
+    for (const t of vault.tags) roots.add(t.split('/')[0] ?? t);
     return [...roots].sort((a, b) => a.localeCompare(b, 'zh-CN'));
   });
   const usedTemplates = $derived(vault.templates.filter((t) => ['login', 'credit_card', 'bank_account', 'identity', 'document', 'secure_note', 'ssh_key', 'server', 'wifi', 'api_credential', 'database', 'software_license', 'crypto_wallet', 'password'].includes(t.id)));
