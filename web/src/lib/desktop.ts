@@ -1,5 +1,5 @@
 // Desktop-only extras of the bridge (settings page section, offline export,
-// self-update). Only bridge-tauri.ts provides them; other builds get null.
+// self-update, ssh-agent, Quick Access, browser extension bridge). Only bridge-tauri.ts provides them; other builds get null.
 
 import type { Bridge } from './bridge';
 
@@ -28,11 +28,56 @@ export interface ExportSettings {
 
 export type ExportSettingsInput = Omit<ExportSettings, 'last_export_at' | 'last_error'>;
 
+export interface SshAgentStatus {
+  /** The configured pipe name / socket path (empty = default). */
+  endpoint_setting: string;
+  enabled: boolean;
+  running: boolean;
+  endpoint: string;
+  default_endpoint: string;
+  /** The value for SSH_AUTH_SOCK / IdentityAgent. */
+  auth_sock: string;
+  error: string;
+  /** Windows: the OpenSSH Authentication Agent service. */
+  system_agent: { state: '' | 'running' | 'stopped' | 'not_installed'; start_type: '' | 'auto' | 'manual' | 'disabled' };
+}
+
+export interface QuickAccessSettings {
+  enabled: boolean;
+  shortcut: string;
+  /** Why the shortcut could not be registered. */
+  error: string;
+  auto_type_supported: boolean;
+}
+
+export interface Pairing {
+  id: string;
+  name: string;
+  public_key: string;
+  extension_id: string;
+  account_id: string;
+  created_at: number;
+  last_used_at: number;
+}
+
+export interface BrowserBridgeSettings {
+  enabled: boolean;
+  extension_ids: string[];
+  pairings: Pairing[];
+  running: boolean;
+  /** Where the native messaging host was registered. */
+  registered: string[];
+  error: string;
+}
+
 export interface DesktopSettings {
   export: ExportSettings;
   exporting: boolean;
   autostart: boolean;
   check_updates: boolean;
+  ssh_agent: SshAgentStatus;
+  quick_access: QuickAccessSettings;
+  browser_bridge: BrowserBridgeSettings;
 }
 
 export interface UpdateCheck {
@@ -57,6 +102,12 @@ export interface DesktopApi {
   /** Downloads, verifies (signature + SHA-256), starts the installer and quits. */
   installUpdate(version: string): Promise<void>;
   openReleasePage(url: string): Promise<void>;
+  setSshAgent(enabled: boolean, endpoint: string): Promise<DesktopSettings>;
+  setQuickAccess(enabled: boolean, shortcut: string): Promise<DesktopSettings>;
+  setBrowserBridge(enabled: boolean, extensionIds: string[]): Promise<DesktopSettings>;
+  removePairing(id: string): Promise<DesktopSettings>;
+  /** Rejects with a message when an auto-type sequence is not valid. */
+  checkAutoType(sequence: string): Promise<void>;
 }
 
 export function desktopApi(bridge: Bridge): DesktopApi | null {

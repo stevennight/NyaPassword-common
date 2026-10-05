@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
-// Two pages: index.html (the vault) and admin.html (the server's admin console).
+// Two pages: index.html (the vault) and admin.html (the server's admin console);
+// the desktop build has desktop.html (Quick Access, confirmations) instead of admin.
 // The default build is the web vault served by the server: the core runs as
 // WebAssembly (src/wasm/pkg, built by scripts/build-wasm.mjs). `--mode desktop`
 // builds the vault for the Tauri app, which talks to the native core instead.
@@ -27,7 +28,8 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       target: ['es2022', 'chrome110', 'safari16'],
       rollupOptions: {
-        input: desktop ? { index: 'index.html' } : { index: 'index.html', admin: 'admin.html' },
+        // desktop.html: the desktop app's Quick Access and confirmation windows
+        input: desktop ? { index: 'index.html', desktop: 'desktop.html' } : { index: 'index.html', admin: 'admin.html' },
       },
     },
     server: {

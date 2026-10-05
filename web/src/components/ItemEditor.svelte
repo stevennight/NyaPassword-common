@@ -4,8 +4,11 @@
   import { confirm, toast } from '$lib/ui.svelte';
   import { bytes } from '$lib/i18n';
   import type { Field, ItemContent } from '$lib/types';
+  import { desktopApi } from '$lib/desktop';
   import Generator from './Generator.svelte';
 
+  // desktop-only parts: the auto-type sequence of Quick Access
+  const desktop = desktopApi(vault.bridge);
   let { vaultId, itemId }: { vaultId: string; itemId: string | null } = $props();
   let c = $state<ItemContent | null>(null);
   let tagsText = $state('');
@@ -100,6 +103,14 @@
 
   async function save(close = true) {
     if (!c) return;
+    const seq = c.autofill?.auto_type;
+    if (desktop && typeof seq === 'string' && seq.trim()) {
+      try {
+        await desktop.checkAutoType(seq);
+      } catch (e) {
+        return vault.fail(e);
+      }
+    }
     c.tags = tagsText.split(/[,，]/).map((t) => t.trim()).filter(Boolean);
     c.urls = (c.urls ?? []).filter((u) => u.url.trim());
     busy = true;
@@ -221,6 +232,27 @@
         <label class="small muted chk"><input type="checkbox" checked={!!c.autofill?.never} onchange={(e) => { c!.autofill = { ...(c!.autofill ?? {}), never: (e.target as HTMLInputElement).checked }; mark(); }} /> 不要自动填充这个条目</label></div>
     </div>
 
+    {#if c.template === 'ssh_key' || c.ssh}
+      <div class="card group">
+        <div class="sec-h">SSH agent（桌面端）</div>
+        <div class="pad col">
+          <label class="small chk"><input type="checkbox" checked={c.ssh?.agent !== false} onchange={(e) => { const { agent: _a, ...rest } = c!.ssh ?? {}; c!.ssh = (e.target as HTMLInputElement).checked ? rest : { ...rest, agent: false }; mark(); }} /> 提供给桌面端的 SSH agent</label>
+          <label class="small chk"><input type="checkbox" checked={c.ssh?.confirm_each_use !== false} onchange={(e) => { c!.ssh = { ...(c!.ssh ?? {}), confirm_each_use: (e.target as HTMLInputElement).checked }; mark(); }} /> 每次签名都确认（关闭后每次解锁只确认一次）</label>
+        </div>
+      </div>
+    {/if}
+
+    {#if desktop && c.fields.some((f) => f.purpose === 'username' || f.purpose === 'password')}
+      <div class="card group">
+        <div class="sec-h">自动输入（桌面端快捷搜索）</div>
+        <div class="pad col">
+          <input class="input mono" value={typeof c.autofill?.auto_type === 'string' ? c.autofill.auto_type : ''} placeholder={'{USERNAME}{TAB}{PASSWORD}{ENTER}'} spellcheck="false"
+            oninput={(e) => { const v = (e.target as HTMLInputElement).value; const { auto_type: _t, ...rest } = c!.autofill ?? {}; c!.autofill = v.trim() ? { ...rest, auto_type: v } : rest; mark(); }} />
+          <span class="faint small">留空使用默认序列。可用 {'{USERNAME} {PASSWORD} {TOTP} {TAB} {ENTER} {SPACE} {DELAY 500} {S:字段名}'}，其他文字原样输入。</span>
+        </div>
+      </div>
+    {/if}
+
     {#if c.passkeys?.length}
       <div class="card group">
         <div class="sec-h">通行密钥</div>
@@ -280,5 +312,6 @@
   .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; width: 100%; }
   .pad { padding: 8px 12px; display: flex; gap: 12px; align-items: center; }
   .chk { display: flex; gap: 6px; align-items: center; }
+  .col { flex-direction: column; align-items: stretch; gap: 6px; }
   @media (max-width: 760px) { .frow { flex-wrap: wrap; } .flabel { width: 100%; } .addr { grid-template-columns: 1fr 1fr; } }
 </style>

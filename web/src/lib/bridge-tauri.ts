@@ -81,6 +81,8 @@ async function listenToApp() {
     if (e.payload.ok) toast(`已完成定期离线导出（${e.payload.files.length} 个文件）`, 'ok', 5000);
     else toast(`定期离线导出失败：${e.payload.message}`, 'error', 8000);
   });
+  // e.g. an SSH client asking for a key while the vault is locked
+  await listen<string>('npw:notice', (e) => toast(e.payload, 'info', 8000));
   await listen<UpdateCheck>('npw:update', (e) => {
     toast(`NyaPassword ${e.payload.latest} 已发布，可在“设置 → 更新”中安装`, 'info', 8000);
   });
@@ -104,6 +106,11 @@ export async function createBridge(): Promise<Bridge> {
     checkUpdate: () => call<UpdateCheck>('update_check'),
     installUpdate: (version) => call('update_install', { version }),
     openReleasePage: (url) => call('open_release_page', { url }),
+    setSshAgent: (enabled, endpoint) => call<DesktopSettings>('set_ssh_agent', { enabled, endpoint }),
+    setQuickAccess: (enabled, shortcut) => call<DesktopSettings>('set_quick_access', { enabled, shortcut }),
+    setBrowserBridge: (enabled, extensionIds) => call<DesktopSettings>('set_browser_bridge', { enabled, extensionIds }),
+    removePairing: (id) => call<DesktopSettings>('remove_pairing', { id }),
+    checkAutoType: (sequence) => call('check_auto_type', { sequence }),
   };
 
   const bridge: Bridge & { desktop: DesktopApi } = {
