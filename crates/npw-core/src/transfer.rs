@@ -4,13 +4,13 @@
 
 use std::collections::HashMap;
 
-use npw_crypto::{aad, envelope, kdf, KdfParams, SecretKey};
+use npw_crypto::{KdfParams, SecretKey};
 use npw_export::{ExportItem, ExportVault};
 use npw_import::ImportResult;
 use npw_model::ItemContent;
 use serde::{Deserialize, Serialize};
 
-use crate::client::{d64, uuid_bytes, Client};
+use crate::client::Client;
 use crate::{CoreError, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,15 +151,8 @@ impl Client {
     /// Checks the master password and returns the Secret Key (for exports that need both).
     pub fn verify_password(&self, password: &str) -> Result<SecretKey> {
         let acc = self.account()?;
-        let sk = self.secret_key()?;
-        let mk = kdf::derive_master(password, &sk, &d64(&acc.account_salt)?, &acc.kdf)?;
-        envelope::unwrap_key(
-            &mk.auk,
-            &d64(&acc.encrypted_account_key)?,
-            &aad::account_key(&uuid_bytes(&acc.account_id)?),
-        )
-        .map_err(|_| CoreError::WrongPassword)?;
-        Ok(sk)
+        self.open_account_key(&acc, password)?;
+        self.secret_key()
     }
 
     /// Every vault with its items (also those in the trash) and decrypted attachments.

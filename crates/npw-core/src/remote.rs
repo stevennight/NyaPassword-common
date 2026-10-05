@@ -185,31 +185,36 @@ impl Client {
             .ok_or(CoreError::NotFound)?
             .clone();
         let key = format!("att/{attachment_id}");
-        let blob = match self.store.get_blob(&key)? {
-            Some(b) => b,
-            None => {
-                let b = self
-                    .authed_raw(
-                        "GET",
-                        &format!("/v1/vaults/{vault_id}/attachments/{attachment_id}"),
-                        None,
-                    )
-                    .await?;
-                self.store.apply(vec![StoreOp::PutBlob(key, b.clone())])?;
-                b
-            }
+        let fk = Key32::from_slice(&d64(&att.key)?)?;
+        let aad = aad::attachment(&uuid_bytes(attachment_id)?);
+        let intact = |blob: &[u8]| {
+            att.blob_sha256.is_empty() || npw_crypto::sha256_hex(blob) == att.blob_sha256
         };
-        if !att.blob_sha256.is_empty() && npw_crypto::sha256_hex(&blob) != att.blob_sha256 {
+        if let Some(b) = self.store.get_blob(&key)? {
+            if intact(&b) {
+                if let Ok(plain) = stream::decrypt(&fk, &aad, &b) {
+                    return Ok(plain);
+                }
+            }
+            // a damaged cached copy: drop it and fetch a fresh one
+            self.store.apply(vec![StoreOp::DeleteBlob(key.clone())])?;
+        }
+        let b = self
+            .authed_raw(
+                "GET",
+                &format!("/v1/vaults/{vault_id}/attachments/{attachment_id}"),
+                None,
+            )
+            .await?;
+        // verify before caching: a corrupt download must not be kept
+        if !intact(&b) {
             return Err(CoreError::Invalid(
                 "attachment does not match its checksum".into(),
             ));
         }
-        let fk = Key32::from_slice(&d64(&att.key)?)?;
-        Ok(stream::decrypt(
-            &fk,
-            &aad::attachment(&uuid_bytes(attachment_id)?),
-            &blob,
-        )?)
+        let plain = stream::decrypt(&fk, &aad, &b)?;
+        self.store.apply(vec![StoreOp::PutBlob(key, b)])?;
+        Ok(plain)
     }
 
     /// Removes an attachment from the item (the blob stays on the server for history).

@@ -73,6 +73,10 @@ impl Default for Retention {
     }
 }
 
+/// Stands in for a stored secret (`smtp_password`, `telegram_bot_token`) in
+/// `GET /v1/admin/backup`. Sending it back unchanged keeps the stored value.
+pub const SECRET_MASK: &str = "••••••••";
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct NotifyConfig {
     #[serde(default)]

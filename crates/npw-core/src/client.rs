@@ -58,6 +58,19 @@ pub(crate) struct VaultState {
     /// Changes up to this sequence number are in the replica.
     pub seq: i64,
     pub created_at: i64,
+    /// The server stopped listing this vault. Its local copy (with unsynced
+    /// edits) is kept, never cleared, and it is not synced until it is back.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub missing_on_server: bool,
+}
+
+/// What unlocks the account key offline: AK wrapped under AUK, and the KDF
+/// parameters and salt that derive AUK from the master password.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct UnlockMaterial {
+    pub kdf: KdfParams,
+    pub account_salt: String,
+    pub encrypted_account_key: String,
 }
 
 /// Non-secret account data persisted on the device.
@@ -78,6 +91,41 @@ pub(crate) struct AccountState {
     pub epoch: String,
     #[serde(default)]
     pub last_sync_at: i64,
+    /// The unlock material in use before the server announced a different one
+    /// (a password change on another device). Offline unlock tries the current
+    /// material, then this one, so a server that sends garbage cannot lock this
+    /// device out. Dropped once the current material has unlocked this device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_unlock: Option<UnlockMaterial>,
+    /// The current material came from the server and has not unlocked this device yet.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub unlock_unverified: bool,
+}
+
+impl AccountState {
+    pub(crate) fn unlock_material(&self) -> UnlockMaterial {
+        UnlockMaterial {
+            kdf: self.kdf,
+            account_salt: self.account_salt.clone(),
+            encrypted_account_key: self.encrypted_account_key.clone(),
+        }
+    }
+
+    fn set_unlock_material(&mut self, m: UnlockMaterial) {
+        self.kdf = m.kdf;
+        self.account_salt = m.account_salt;
+        self.encrypted_account_key = m.encrypted_account_key;
+    }
+}
+
+/// What [`Client::apply_account_resp`] kept from the local state instead of
+/// taking the server's word.
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct AccountUpdate {
+    /// Vaults the server no longer lists (kept locally, not synced).
+    pub missing_vaults: usize,
+    /// The server's unlock material failed validation and was not adopted.
+    pub unlock_refused: bool,
 }
 
 pub(crate) struct Keyring {
@@ -448,9 +496,12 @@ impl Client {
                 role: "owner".into(),
                 seq: 0,
                 created_at: npw_model::now_ms(),
+                missing_on_server: false,
             }],
             epoch: String::new(),
             last_sync_at: 0,
+            previous_unlock: None,
+            unlock_unverified: false,
         };
         self.store.apply(vec![
             self.persist_account(&acc)?,
@@ -588,14 +639,17 @@ impl Client {
             login: acct.login.clone(),
             account_id: acct.account_id.clone(),
             device_id: session.device_id.clone(),
-            kdf: acct.kdf,
-            account_salt: acct.account_salt.clone(),
+            // the parameters that just derived the key which opened AK
+            kdf: pre.kdf,
+            account_salt: pre.account_salt.clone(),
             encrypted_account_key: acct.encrypted_account_key.clone(),
             public_key: acct.public_key.clone(),
             encrypted_private_key: acct.encrypted_private_key.clone(),
             vaults: vec![],
             epoch: String::new(),
             last_sync_at: 0,
+            previous_unlock: None,
+            unlock_unverified: false,
         };
         self.store.apply(vec![
             self.persist_account(&acc)?,
@@ -624,17 +678,56 @@ impl Client {
         Ok(())
     }
 
-    /// Updates vaults (keys, metadata) from `GET /v1/account`.
-    pub(crate) fn apply_account_resp(&self, r: api_t::AccountResp) -> Result<()> {
+    /// Checks unlock material from the server before it replaces what this device has.
+    fn check_unlock_material(&self, m: &UnlockMaterial) -> Result<()> {
+        self.check_kdf(&m.kdf)?;
+        if !(16..=64).contains(&d64(&m.account_salt)?.len()) {
+            return Err(CoreError::Invalid("bad account salt".into()));
+        }
+        if d64(&m.encrypted_account_key)?.is_empty() {
+            return Err(CoreError::Invalid("empty wrapped account key".into()));
+        }
+        Ok(())
+    }
+
+    /// Updates vaults (keys, metadata) and the unlock material from `GET /v1/account`.
+    ///
+    /// The server is not trusted with what this device needs to work offline:
+    /// - a vault it stops listing keeps its local copy (never cleared; vaults
+    ///   cannot be deleted through the API) and is skipped by sync;
+    /// - new unlock material (another device changed the master password) must
+    ///   pass validation, and the last material known to work is kept as a
+    ///   fallback for offline unlock.
+    pub(crate) fn apply_account_resp(&self, r: api_t::AccountResp) -> Result<AccountUpdate> {
         let mut acc = self.account()?;
         if r.account_id != acc.account_id {
             return Err(CoreError::Invalid(
                 "the server returned another account".into(),
             ));
         }
-        acc.encrypted_account_key = r.encrypted_account_key;
-        acc.kdf = r.kdf;
-        acc.account_salt = r.account_salt;
+        let mut update = AccountUpdate::default();
+        let offered = UnlockMaterial {
+            kdf: r.kdf,
+            account_salt: r.account_salt,
+            encrypted_account_key: r.encrypted_account_key,
+        };
+        let current = acc.unlock_material();
+        if offered != current {
+            match self.check_unlock_material(&offered) {
+                Ok(()) => {
+                    // keep the material that last worked; an unverified one is just replaced
+                    if !acc.unlock_unverified {
+                        acc.previous_unlock = Some(current);
+                    }
+                    acc.set_unlock_material(offered);
+                    acc.unlock_unverified = true;
+                }
+                Err(e) => {
+                    tracing::warn!("ignoring the account key update from the server: {e}");
+                    update.unlock_refused = true;
+                }
+            }
+        }
         let mut vaults = vec![];
         for v in r.vaults {
             let seq = acc
@@ -651,20 +744,20 @@ impl Client {
                 role: v.role,
                 seq,
                 created_at: v.created_at,
+                missing_on_server: false,
             });
         }
-        let removed: Vec<String> = acc
-            .vaults
-            .iter()
-            .filter(|o| !vaults.iter().any(|n| n.id == o.id))
-            .map(|o| o.id.clone())
-            .collect();
-        acc.vaults = vaults;
-        let mut ops = vec![self.persist_account(&acc)?];
-        for v in &removed {
-            ops.push(StoreOp::ClearVault(v.clone()));
+        for old in &acc.vaults {
+            if !vaults.iter().any(|n| n.id == old.id) {
+                vaults.push(VaultState {
+                    missing_on_server: true,
+                    ..old.clone()
+                });
+                update.missing_vaults += 1;
+            }
         }
-        self.store.apply(ops)?;
+        acc.vaults = vaults;
+        self.store.apply(vec![self.persist_account(&acc)?])?;
         let mut st = self.state.lock().expect("state");
         st.account = Some(acc.clone());
         if let Some(keys) = st.keys.as_mut() {
@@ -678,30 +771,76 @@ impl Client {
                     keys.vault_keys.insert(v.id.clone(), vk);
                 }
             }
-            keys.vault_keys
-                .retain(|id, _| acc.vaults.iter().any(|v| &v.id == id));
         }
-        for v in removed {
-            st.cache.items.retain(|(vid, _), _| *vid != v);
-        }
-        Ok(())
+        Ok(update)
     }
 
     // ------------------------------------------------------------ unlock / lock
 
+    /// Opens AK with the master password: the current unlock material first,
+    /// then the previous one (see [`AccountState::previous_unlock`]).
+    /// Returns AK, the master keys and whether the current material worked.
+    pub(crate) fn open_account_key(
+        &self,
+        acc: &AccountState,
+        password: &str,
+    ) -> Result<(Key32, kdf::MasterKeys, bool)> {
+        let sk = self.secret_key()?;
+        let acc_bytes = uuid_bytes(&acc.account_id)?;
+        let mut first_err = None;
+        let mut tried = false;
+        let candidates = std::iter::once(acc.unlock_material()).chain(acc.previous_unlock.clone());
+        for (i, m) in candidates.enumerate() {
+            let attempt = (|| -> Result<(Key32, kdf::MasterKeys)> {
+                self.check_kdf(&m.kdf)?;
+                let mk = kdf::derive_master(password, &sk, &d64(&m.account_salt)?, &m.kdf)?;
+                tried = true;
+                let ak = envelope::unwrap_key(
+                    &mk.auk,
+                    &d64(&m.encrypted_account_key)?,
+                    &aad::account_key(&acc_bytes),
+                )
+                .map_err(|_| CoreError::WrongPassword)?;
+                Ok((ak, mk))
+            })();
+            match attempt {
+                Ok((ak, mk)) => return Ok((ak, mk, i == 0)),
+                Err(e) => {
+                    first_err.get_or_insert(e);
+                }
+            }
+        }
+        Err(if tried {
+            CoreError::WrongPassword
+        } else {
+            first_err.unwrap_or(CoreError::WrongPassword)
+        })
+    }
+
     /// Unlocks with the master password. Works offline.
     pub fn unlock(&self, password: &str) -> Result<()> {
         let acc = self.account()?;
-        self.check_kdf(&acc.kdf)?;
-        let sk = self.secret_key()?;
-        let mk = kdf::derive_master(password, &sk, &d64(&acc.account_salt)?, &acc.kdf)?;
-        let ak = envelope::unwrap_key(
-            &mk.auk,
-            &d64(&acc.encrypted_account_key)?,
-            &aad::account_key(&uuid_bytes(&acc.account_id)?),
-        )
-        .map_err(|_| CoreError::WrongPassword)?;
+        let (ak, mk, current) = self.open_account_key(&acc, password)?;
+        if current && (acc.unlock_unverified || acc.previous_unlock.is_some()) {
+            // the current material works here: the fallback is no longer needed
+            self.update_account(|a| {
+                if a.unlock_material() == acc.unlock_material() {
+                    a.unlock_unverified = false;
+                    a.previous_unlock = None;
+                }
+            })?;
+        }
         self.finish_unlock(ak, Some(mk.login))
+    }
+
+    /// Changes the persisted account state in one step.
+    pub(crate) fn update_account(&self, f: impl FnOnce(&mut AccountState)) -> Result<()> {
+        let mut st = self.state.lock().expect("state");
+        let mut acc = st.account.clone().ok_or(CoreError::NotSignedIn)?;
+        f(&mut acc);
+        self.store.apply(vec![self.persist_account(&acc)?])?;
+        st.account = Some(acc);
+        Ok(())
     }
 
     /// The key a host may store behind biometrics for quick unlock. Only while unlocked.
@@ -771,7 +910,11 @@ impl Client {
     }
 
     /// Removes the account from this device. Refuses while edits are unsynced, unless `force`.
+    /// Signing out when already signed out (e.g. after the device was revoked) succeeds.
     pub async fn sign_out(&self, force: bool) -> Result<()> {
+        if self.state.lock().expect("state").account.is_none() {
+            return self.wipe_local();
+        }
         let pending = self
             .store
             .list_all_items()?
@@ -793,14 +936,35 @@ impl Client {
             )
             .await;
         }
-        let acc = self.account()?;
+        self.wipe_local()
+    }
+
+    /// Deletes the account, the Secret Key, the session, the whole replica and
+    /// cached attachments from this device, without asking the server.
+    fn wipe_local(&self) -> Result<()> {
         let mut ops = vec![
             StoreOp::DeleteMeta(META_ACCOUNT.into()),
             StoreOp::DeleteMeta(META_SECRET_KEY.into()),
             StoreOp::DeleteMeta(META_SESSION.into()),
         ];
-        for v in &acc.vaults {
-            ops.push(StoreOp::ClearVault(v.id.clone()));
+        let mut vaults: std::collections::BTreeSet<String> = self
+            .store
+            .list_all_items()?
+            .into_iter()
+            .map(|i| i.vault_id)
+            .collect();
+        if let Ok(acc) = self.account() {
+            vaults.extend(acc.vaults.into_iter().map(|v| v.id));
+        }
+        ops.extend(vaults.into_iter().map(StoreOp::ClearVault));
+        {
+            // cached attachment blobs are named in the (decrypted) item contents
+            let st = self.state.lock().expect("state");
+            for c in st.cache.items.values() {
+                for a in &c.content.attachments {
+                    ops.push(StoreOp::DeleteBlob(format!("att/{}", a.id)));
+                }
+            }
         }
         self.store.apply(ops)?;
         let mut st = self.state.lock().expect("state");
@@ -810,6 +974,17 @@ impl Client {
         st.cache = Cache::default();
         *self.transport.write().expect("lock") = None;
         Ok(())
+    }
+
+    /// The server says this device was revoked: it is treated as lost. Sign out
+    /// and wipe everything of the account here (no silent sign-in again).
+    fn on_revoked<T>(&self, r: Result<T>) -> Result<T> {
+        if let Err(CoreError::DeviceRevoked) = &r {
+            if let Err(e) = self.wipe_local() {
+                tracing::error!("wiping the revoked device failed: {e}");
+            }
+        }
+        r
     }
 
     // ------------------------------------------------------------ sessions
@@ -869,8 +1044,19 @@ impl Client {
         Ok(s.access_token)
     }
 
-    /// An authenticated call, retried once after renewing the session on 401.
+    /// An authenticated call, retried once after renewing the session on 401
+    /// `unauthorized`. `device_revoked` is final: the device wipes its local copy.
     pub(crate) async fn authed<Req: Serialize, Resp: for<'de> Deserialize<'de>>(
+        &self,
+        method: &'static str,
+        path: &str,
+        body: Option<&Req>,
+    ) -> Result<Resp> {
+        let r = self.authed_once(method, path, body).await;
+        self.on_revoked(r)
+    }
+
+    async fn authed_once<Req: Serialize, Resp: for<'de> Deserialize<'de>>(
         &self,
         method: &'static str,
         path: &str,
@@ -894,6 +1080,16 @@ impl Client {
         path: &str,
         body: Option<Vec<u8>>,
     ) -> Result<Vec<u8>> {
+        let r = self.authed_raw_once(method, path, body).await;
+        self.on_revoked(r)
+    }
+
+    async fn authed_raw_once(
+        &self,
+        method: &'static str,
+        path: &str,
+        body: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>> {
         let t = self.transport()?;
         let token = self.bearer().await?;
         match api::call_raw(&*t, method, path, body.clone(), Some(&token)).await {
@@ -908,7 +1104,8 @@ impl Client {
 
     /// A short-lived token for the events WebSocket (`wss://.../v1/events?token=`).
     pub async fn events_token(&self) -> Result<String> {
-        self.bearer().await
+        let r = self.bearer().await;
+        self.on_revoked(r)
     }
 
     // ------------------------------------------------------------ account management
@@ -920,15 +1117,8 @@ impl Client {
         }
         let acc = self.account()?;
         let sk = self.secret_key()?;
-        let salt = d64(&acc.account_salt)?;
-        let old = kdf::derive_master(current, &sk, &salt, &acc.kdf)?;
+        let (ak, _, _) = self.open_account_key(&acc, current)?;
         let acc_bytes = uuid_bytes(&acc.account_id)?;
-        let ak = envelope::unwrap_key(
-            &old.auk,
-            &d64(&acc.encrypted_account_key)?,
-            &aad::account_key(&acc_bytes),
-        )
-        .map_err(|_| CoreError::WrongPassword)?;
         let new_salt = npw_crypto::random_bytes::<16>();
         let params = if self.cfg.allow_weak_kdf {
             acc.kdf
@@ -960,11 +1150,16 @@ impl Client {
                 }),
             )
             .await?;
-        let mut acc = acc;
-        acc.kdf = params;
-        acc.account_salt = b64(&new_salt);
-        acc.encrypted_account_key = b64(&enc_ak);
-        self.save_account(acc)?;
+        self.update_account(|a| {
+            a.set_unlock_material(UnlockMaterial {
+                kdf: params,
+                account_salt: b64(&new_salt),
+                encrypted_account_key: b64(&enc_ak),
+            });
+            // made (and so verified) here
+            a.unlock_unverified = false;
+            a.previous_unlock = None;
+        })?;
         if let Some(keys) = self.state.lock().expect("state").keys.as_mut() {
             keys.login = Some(mk.login);
         }
@@ -1063,7 +1258,8 @@ impl Client {
         let acct: api_t::AccountResp = self
             .authed::<api::Empty, _>("GET", "/v1/account", None)
             .await?;
-        self.apply_account_resp(acct)
+        self.apply_account_resp(acct)?;
+        Ok(())
     }
 
     pub(crate) fn vault_meta(&self, v: &VaultState, vk: &Key32) -> Result<VaultMeta> {

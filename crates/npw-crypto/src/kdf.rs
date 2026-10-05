@@ -139,6 +139,14 @@ pub fn derive_master(
 }
 
 /// Key for a recovery code (256 random bits, so plain HKDF suffices).
+///
+/// TODO(recovery code): `account_salt` is replaced on every master password
+/// change (`npw-core` `change_password`, server `password_finish`), which would
+/// silently break a recovery code derived from the old salt. Before shipping
+/// recovery codes, give them their own salt, stored with
+/// `encrypted_account_key_recovery` and kept across password changes (the code
+/// itself is not available at password-change time, so re-wrapping is not an
+/// option). See docs/加密规格.md §2.3.
 pub fn derive_recovery(code: &[u8; 32], account_salt: &[u8]) -> MasterKeys {
     let hk = Hkdf::<Sha256>::new(Some(account_salt), code);
     let mut auk = [0u8; 32];

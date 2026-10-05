@@ -164,6 +164,10 @@ export interface SyncReport {
   rollbacks_detected: number;
   full_resyncs: number;
   finished_at: number;
+  /** Vaults the server no longer lists; kept locally (with unsynced edits) but not synced. */
+  vaults_missing_on_server?: number;
+  /** The server sent unlock material that failed validation; this device keeps its own. */
+  account_key_update_refused?: boolean;
 }
 
 export interface RevisionInfo {

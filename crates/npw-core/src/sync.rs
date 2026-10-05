@@ -3,9 +3,11 @@
 //! For each vault: pull the server's changes since the last known sequence
 //! number (merging them into local pending edits), push the pending edits
 //! with optimistic concurrency, repeat until nothing conflicts, then compare
-//! digests. A digest mismatch, a server whose sequence went backwards, or a
-//! changed server epoch (restored from a backup) triggers a full
-//! reconciliation, which re-uploads anything the server lost.
+//! digests (pulling again first when the server moved on meanwhile). A digest
+//! mismatch, a server whose sequence went backwards, or a changed server epoch
+//! (restored from a backup) triggers a full reconciliation, which re-uploads
+//! anything the server lost. Vaults the server stops listing are kept locally
+//! and skipped (reported in [`SyncReport::vaults_missing_on_server`]).
 //!
 //! Invariants:
 //! - a pending edit is removed only once the server acknowledged exactly that edit;
@@ -27,6 +29,8 @@ use crate::{api, CoreError, Result};
 const PAGE: usize = 500;
 const PUSH_BATCH: usize = 100;
 const MAX_ROUNDS: usize = 8;
+/// Digest comparisons per vault and sync before a mismatch means a full reconciliation.
+const DIGEST_ATTEMPTS: usize = 3;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SyncReport {
@@ -46,6 +50,14 @@ pub struct SyncReport {
     pub rollbacks_detected: usize,
     pub full_resyncs: usize,
     pub finished_at: i64,
+    /// Vaults the server no longer lists. Their local copies (and unsynced
+    /// edits) are kept but not synced; the server may have lost them.
+    #[serde(default)]
+    pub vaults_missing_on_server: usize,
+    /// The server sent new unlock material (wrapped account key, KDF parameters,
+    /// salt) that failed validation; this device keeps using its own.
+    #[serde(default)]
+    pub account_key_update_refused: bool,
 }
 
 impl Client {
@@ -66,41 +78,44 @@ impl Client {
             .await?;
         let server_seqs: HashMap<String, i64> =
             acct.vaults.iter().map(|v| (v.id.clone(), v.seq)).collect();
-        self.apply_account_resp(acct)?;
+        let update = self.apply_account_resp(acct)?;
+        report.vaults_missing_on_server = update.missing_vaults;
+        report.account_key_update_refused = update.unlock_refused;
 
         let mut acc = self.account()?;
         let epoch_changed = !acc.epoch.is_empty() && !epoch.is_empty() && acc.epoch != epoch;
 
-        for vault_id in acc.vaults.iter().map(|v| v.id.clone()).collect::<Vec<_>>() {
+        let vault_ids: Vec<String> = acc
+            .vaults
+            .iter()
+            .filter(|v| !v.missing_on_server)
+            .map(|v| v.id.clone())
+            .collect();
+        for vault_id in vault_ids {
             let vk = self.vault_key(&vault_id)?;
-            let local_seq = self
-                .account()?
-                .vaults
-                .iter()
-                .find(|v| v.id == vault_id)
-                .map(|v| v.seq)
-                .unwrap_or(0);
             let server_seq = server_seqs.get(&vault_id).copied().unwrap_or(0);
-            let mut full = epoch_changed || server_seq < local_seq;
+            let full = epoch_changed || server_seq < self.local_seq(&vault_id)?;
+            self.exchange(&vault_id, &vk, full, &mut report).await?;
 
-            for _ in 0..MAX_ROUNDS {
-                if full {
-                    self.reconcile(&vault_id, &vk, &mut report).await?;
-                    report.full_resyncs += 1;
-                    full = false;
-                } else {
-                    self.pull(&vault_id, &vk, &mut report).await?;
-                }
-                let conflicts = self.push(&vault_id, &mut report).await?;
-                if conflicts == 0 {
+            // Compare digests. While the server is ahead of what was pulled, a mismatch
+            // can come from writes after the pull (other devices, our own push): pull,
+            // push and compare again. A mismatch at the pulled sequence number, or one
+            // that persists, means the histories differ: reconcile everything.
+            let mut agreed = false;
+            for attempt in 1..=DIGEST_ATTEMPTS {
+                let d: api_t::DigestResp = self
+                    .authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/digest"), None)
+                    .await?;
+                if d.digest == self.local_digest(&vault_id)? {
+                    agreed = true;
                     break;
                 }
+                if attempt == DIGEST_ATTEMPTS || d.vault_seq <= self.local_seq(&vault_id)? {
+                    break;
+                }
+                self.exchange(&vault_id, &vk, false, &mut report).await?;
             }
-
-            let d: api_t::DigestResp = self
-                .authed::<api::Empty, _>("GET", &format!("/v1/vaults/{vault_id}/digest"), None)
-                .await?;
-            if d.digest != self.local_digest(&vault_id)? {
+            if !agreed {
                 self.reconcile(&vault_id, &vk, &mut report).await?;
                 report.full_resyncs += 1;
                 self.push(&vault_id, &mut report).await?;
@@ -113,6 +128,41 @@ impl Client {
         self.save_account(acc)?;
         report.finished_at = npw_model::now_ms();
         Ok(report)
+    }
+
+    /// Pull (or fully reconcile) and push until nothing conflicts (at most `MAX_ROUNDS`).
+    async fn exchange(
+        &self,
+        vault_id: &str,
+        vk: &Key32,
+        mut full: bool,
+        report: &mut SyncReport,
+    ) -> Result<()> {
+        for _ in 0..MAX_ROUNDS {
+            if full {
+                self.reconcile(vault_id, vk, report).await?;
+                report.full_resyncs += 1;
+                full = false;
+            } else {
+                self.pull(vault_id, vk, report).await?;
+            }
+            let conflicts = self.push(vault_id, report).await?;
+            if conflicts == 0 {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    /// Changes up to this sequence number are in the replica.
+    fn local_seq(&self, vault_id: &str) -> Result<i64> {
+        Ok(self
+            .account()?
+            .vaults
+            .iter()
+            .find(|v| v.id == vault_id)
+            .map(|v| v.seq)
+            .unwrap_or(0))
     }
 
     fn local_digest(&self, vault_id: &str) -> Result<String> {
@@ -134,13 +184,7 @@ impl Client {
     }
 
     async fn pull(&self, vault_id: &str, vk: &Key32, report: &mut SyncReport) -> Result<()> {
-        let mut since = self
-            .account()?
-            .vaults
-            .iter()
-            .find(|v| v.id == vault_id)
-            .map(|v| v.seq)
-            .unwrap_or(0);
+        let mut since = self.local_seq(vault_id)?;
         loop {
             let page: api_t::ChangesResp = self
                 .authed::<api::Empty, _>(
@@ -431,7 +475,9 @@ impl Client {
         let mut server: HashMap<String, ItemRecord> = HashMap::new();
         let mut since = 0;
         let vault_seq;
-        let purged: HashSet<String>;
+        // Tombstones come with the page whose sequence range holds them (older
+        // servers: only with the last page), so collect them from every page.
+        let mut purged: HashSet<String> = HashSet::new();
         loop {
             let page: api_t::ChangesResp = self
                 .authed::<api::Empty, _>(
@@ -443,10 +489,10 @@ impl Client {
             for r in page.items {
                 server.insert(r.item_id.clone(), r);
             }
+            purged.extend(page.purged);
             since = page.next_seq;
             if !page.has_more {
                 vault_seq = page.vault_seq;
-                purged = page.purged.into_iter().collect();
                 break;
             }
         }

@@ -63,13 +63,13 @@
 |---|---|---|
 | `invalid_request` | 400 | 参数不合法：登录名为空 / 超过 200 字符 / 含控制字符、ID 不是 UUID、base64 错误、KDF 参数越界（message `invalid key derivation parameters`）、OPAQUE 消息无法解析（`OPAQUE protocol error`）、单次推送超过 1000 条、备份设置不合法等 |
 | `unauthorized` | 401 | 缺少 / 无效 / 过期的 token；refresh token 无效或过期 |
-| `device_revoked` | 401 | token 对应的会话还在、但设备已被吊销。吊销时服务端同时删除该设备的全部会话，所以目前吊销后的 token 实际得到的是 `unauthorized`（见 §8） |
+| `device_revoked` | 401 | 设备已被吊销：该设备的 access / refresh token（吊销不删除会话，它们自然过期），以及登录时 `device.id` 是本账户已吊销的设备（见 §3.2、§8） |
 | `login_failed` | 401 | 登录失败（密码、Secret Key、登录名错误不可区分；`login_id` 过期或已用过）；管理口令或 TOTP 错误 |
 | `forbidden` | 403 | 尚未设置管理口令时的管理登录 |
 | `registration_closed` | 403 | 注册需要邀请码，或邀请码无效、过期、已用过 |
 | `not_found` | 404 | 资源不存在，**或不是该保险库的成员**（不区分，避免泄露存在性） |
 | `conflict` | 409 | 登录名或账户 ID 已注册、保险库 ID 已存在、保险库元数据并发修改、附件 ID 已存在且内容不同 |
-| `rate_limited` | 429 | 登录 / 管理登录尝试过多 |
+| `rate_limited` | 429 | 登录、prelogin、注册、管理登录尝试过多 |
 | `server_error` | 500 | 内部错误（细节只写服务端日志） |
 | `too_large` | — | 常量已定义，目前没有接口返回它 |
 
@@ -87,6 +87,7 @@
 
 → `{ "opaque_response": "<B64>" }`
 
+- 限速：`register/start` 与 `register/finish` 合计每个 IP 每分钟 30 次，超过返回 429。
 - `invite` 可省略：还没有账户且 `open_first_registration` 时不需要，否则必须是有效、未过期、未使用的邀请码（此步只检查不消耗）。
 - 服务端以 `account_id` 的 16 字节作为 OPAQUE 凭据标识（[加密规格.md](加密规格.md) §7）。
 
@@ -108,7 +109,7 @@
 }
 ```
 
-- 校验：登录名、两个 UUID、`kdf.validate()`、OPAQUE upload 可解析、所有 B64 字段可解码。
+- 校验：登录名、两个 UUID、`kdf.validate()`、`account_salt` 解码后 16–64 字节、OPAQUE upload 可解析、所有 B64 字段可解码。
 - 在一个事务里：消耗邀请码 → 登录名（不区分大小写，`COLLATE NOCASE`）或账户 ID 已存在则 409 → 写账户、第一个保险库（`seq = 0`、`meta_revision = 1`）、`owner` 成员关系 → 新建设备和会话 → 审计 `register`。
 - 登录名在服务端去首尾空白后保存。
 
@@ -121,6 +122,8 @@
 ```
 
 不存在的登录名返回由服务端秘密派生的、稳定的伪造值（[加密规格.md](加密规格.md) §9），不能用来探测账户是否存在。客户端必须先 `kdf.validate()` 再派生。
+
+限速与 `login/start` 相同但计数独立：每个 IP 每分钟 30 次、每个登录名每小时 20 次，超过返回 429。
 
 `POST /v1/auth/login/start`（无认证）
 
@@ -140,7 +143,7 @@
 { "login_id": "<UUID>", "opaque_finalization": "<B64>", "device": { "id": "<之前的设备 ID，可省略>", "name": "…", "platform": "android", "client_version": "0.1.0" } }
 ```
 
-→ `Session`；失败一律 401 `login_failed`。`login_id` 无论成败只能用一次。`device.id` 属于该账户且未吊销时复用该设备（更新名称等），否则新建设备（名称截到 100 字符、平台 20、版本 40）。审计 `login` / `login_failed`。
+→ `Session`；失败一律 401 `login_failed`。`login_id` 无论成败只能用一次。`device.id` 属于该账户且未吊销时复用该设备（更新名称等）；**属于该账户但已吊销时拒绝登录，返回 401 `device_revoked`**（被吊销的设备不能用内存里的 LOGIN 悄悄回来）；省略或不属于该账户时新建设备（名称截到 100 字符、平台 20、版本 40）。审计 `login` / `login_failed`。
 
 `DeviceInfo.platform`：`windows`、`macos`、`linux`、`android`、`chrome`、`web`、`cli`。
 
@@ -155,10 +158,10 @@
 | access token | 1 小时 | 每次请求的 bearer；服务端只存其 SHA-256 |
 | refresh token | 30 天 | `POST /v1/auth/refresh` `{ "refresh_token": "…" }`（无认证）→ 新的 `Session`；旧 refresh token 立即作废（无论是否过期），旧 access token 自然过期 |
 
-- refresh 时会话还在但设备已吊销返回 401 `device_revoked`；吊销会同时删除会话，所以实际得到的是 `unauthorized`。
+- 设备被吊销后，它的 access token 和 refresh token 都返回 401 `device_revoked`（吊销不删除会话，会话到期后按普通过期清理）。
 - `POST /v1/auth/logout`（用户）→ `{}`：删除本设备的所有会话。
 - 用 access token 的请求每 5 分钟最多更新一次设备的 `last_seen_at`。
-- `npw-core`：access token 离过期不到 1 分钟时先 refresh；请求得到 401 `unauthorized`（或 refresh 失败）时，如果本机处于解锁状态（内存里有 LOGIN），静默重新走一遍 OPAQUE 登录（带上本机的设备 ID）。
+- `npw-core`：access token 离过期不到 1 分钟时先 refresh；请求得到 401 `unauthorized`（或 refresh 得到 `unauthorized`）时，如果本机处于解锁状态（内存里有 LOGIN），静默重新走一遍 OPAQUE 登录（带上本机的设备 ID）。得到 `device_revoked`（任何请求、refresh 或重新登录）时**不再重试**：本机视为丢失，`npw-core` 立即在本地退出并清除该账户的一切——账户状态、Secret Key、会话、整个本地副本（含未推送的修改）、缓存的附件——然后返回 `device_revoked` 错误；之后宿主调用 `sign_out` 也会成功。
 
 ## 4. 账户
 
@@ -191,7 +194,9 @@
 { "opaque_upload": "<B64>", "kdf": { … }, "account_salt": "<B64，新盐>", "encrypted_account_key": "<B64，新 AUK 封装的同一个 AK>" }
 ```
 
-服务端校验 `kdf`，替换 OPAQUE 记录、KDF 参数、盐和 `encrypted_account_key`，**删除本账户其他设备的所有会话**（它们要用新密码重新登录），审计 `password_change`。
+服务端校验 `kdf`、`account_salt`（可解码且 16–64 字节）、`encrypted_account_key`（可解码且非空）——校验在替换任何东西之前，不合格返回 400——然后替换 OPAQUE 记录、KDF 参数、盐和 `encrypted_account_key`，**删除本账户其他设备的所有会话**（它们要用新密码重新登录），向该账户推送 `account_changed`，审计 `password_change`。
+
+客户端（`npw-core` `apply_account_resp`）不无条件接受 `AccountResp` 里的 `kdf` / `account_salt` / `encrypted_account_key`：参数必须通过 `kdf.validate()`、盐 16–64 字节、封装的 AK 可解码，否则保留本地的并在 `SyncReport.account_key_update_refused` 报告；接受新值时把上一份**确认能解锁**的值留作备用，离线解锁先试当前的、再试备用的；当前的值在本机成功解锁一次后丢弃备用。
 
 审计日志：最近 500 条，新的在前，`{ "at", "action", "device_id", "ip", "detail" }`。账户可见的 `action`：`register`、`login`、`login_failed`、`vault_create`、`device_revoke`、`password_change`、`import`（原子推送写入了条目，`detail` = `N items`）、`purge`。
 
@@ -202,9 +207,9 @@
 | POST | `/v1/vaults` | 用户 | `{ "id", "wrapped_key", "encrypted_meta" }` | `{}`；ID 已存在 409 |
 | PUT | `/v1/vaults/{vault}/meta` | 用户 | `{ "encrypted_meta", "base_revision" }` | `{}` |
 
-- 新保险库 `seq = 0`、`meta_revision = 1`，调用者成为 `owner`，审计 `vault_create`。
+- 新保险库 `seq = 0`、`meta_revision = 1`，调用者成为 `owner`，向该账户推送 `account_changed`，审计 `vault_create`。
 - 改元数据（名称、图标）用乐观并发：`base_revision` 必须等于当前 `meta_revision`，否则 409；成功后 `meta_revision + 1`，并向该账户推送 `account_changed` 事件。
-- 删除保险库没有接口。
+- 删除保险库没有接口。所以 `GET /v1/account` 里少了一个保险库时，客户端**不会**清空它的本地副本：保留全部条目和未推送的修改，暂停同步该保险库，并在 `SyncReport.vaults_missing_on_server` 报告；保险库重新出现时恢复同步（服务端 `seq` 小于本地时全量对账）。
 
 ## 6. 条目与同步
 
@@ -236,7 +241,7 @@
 | `has_more` | 返回条数等于 `limit` |
 | `next_seq` | 下一页的 `since`。`has_more` 时是最后一条的 `seq`；否则是 `max(vault_seq, 最后一条的 seq)`，即可以直接记为“已同步到” |
 | `vault_seq` | 保险库当前最大序号 |
-| `purged` | 只在最后一页（`has_more = false`）给出：墓碑 `seq` 大于**这一页请求的** `since` 的永久删除条目 ID。客户端据此删掉本地副本，而不是把“服务端没有了”当作服务端丢数据去重新上传。为空时省略。**已知问题**：分多页拉取时，墓碑 `seq` 落在前面几页范围内的会漏掉（见 §12） |
+| `purged` | 墓碑 `seq` 落在这一页范围内的永久删除条目 ID：`has_more` 时为 `since < seq ≤ next_seq`，最后一页为 `seq > since`。按 `next_seq` 逐页拉取时每个墓碑恰好送达一次。客户端据此删掉本地副本，而不是把“服务端没有了”当作服务端丢数据去重新上传（全量对账时汇总所有页的墓碑）。为空时省略 |
 
 ### 6.2 推送
 
@@ -270,7 +275,7 @@
 1. **逐条校验**（不合格 → `rejected` + `reason`）：同一请求里 `item_id` 重复（`item appears twice in one request`）、`item_id` 不是 UUID（`bad item id`）、`op_id` 为空或超过 100 字节（`bad op id`）、`base_revision < 0` 或 `format_major = 0`（`bad revision or format`）、base64 错（`bad base64`）、`wrapped_key` 或 `ciphertext` 为空（`empty ciphertext`）、两者解码后合计超过 `max_item_kb`（默认 1024 KiB，`item too large`）。超过 1000 条整个请求 400。
 2. 不是保险库成员 → 整个请求 404。
 3. 在一个事务里依次处理：
-   - **幂等**：`op_id` 已处理过 → 直接返回当时的结果（`ok`、当时的 `item_id`、`revision`、`seq`），不再写入。客户端重试同一操作不会产生重复修订。
+   - **幂等**：同一账户在同一保险库里的 `op_id` 已处理过 → 直接返回当时的结果（`ok`、`item_id`、当时的 `revision`、`seq`），不再写入。客户端重试同一操作不会产生重复修订。幂等记录按（保险库，账户，`op_id`）区分：别的账户或别的保险库用了相同的 `op_id` 不影响本次写入；同一账户同一保险库用同一 `op_id` 写**另一个**条目 → `rejected`（`op id already used for another item`），绝不把它当作“已完成”。
    - **乐观并发**：条目当前修订号（不存在为 0）≠ `base_revision` → `conflict` + `current_revision`。客户端应拉取、合并、以新的 `base_revision` 和**新的 `op_id`** 重推。`base_revision = 0` 表示新建。
    - 否则：`revision = 当前 + 1`，`seq = 保险库 seq + 1`，追加修订、更新条目头、记录 `op_id`。新建（当前为 0）时顺便删除该条目的永久删除墓碑（条目被重新创建）。
 4. `atomic: true`（导入）：任何一条校验不合格 → 其余全部 `rejected`（`batch aborted`），什么都不写；任何一条 `conflict` → 回滚，原本 `ok` 的改成 `rejected`（`batch aborted`）。全部成功时审计 `import`。
@@ -300,7 +305,7 @@
 - 只处理**当前在回收站**（最新修订 `deleted = true`）的条目，其他 ID 静默跳过。
 - 每个被删条目：删除它的全部修订、条目头、附件记录和附件文件；保险库 `seq + 1`，写一条墓碑 `(vault_id, item_id, seq, at)`（已有则更新），供 §6.1 的 `purged` 使用。审计 `purge`。
 - 服务端从不自动清空回收站，必须由客户端发起（界面要求用户确认）。
-- 不推送事件；其他设备在下次同步时从 `purged` 得知。
+- 有条目被删除时向保险库所有成员推送 `vault_changed`；其他设备在同步时从 `purged` 得知。
 
 ### 6.6 同步语义（`npw-core` `sync.rs`）
 
@@ -309,7 +314,8 @@
 1. `GET /v1/server-info` 取 `epoch`，`GET /v1/account` 取各保险库的 `seq` 并更新密钥和元数据。
 2. 需要全量对账的情况：本地记录的 `epoch` 非空且与服务端不同（服务端从备份恢复过）、服务端 `seq` 小于本地已同步到的 `seq`（回滚）、或第 4 步摘要不一致。全量对账 = 从 `since=0` 拉取全部条目头逐条比较：服务端缺失的（且不在墓碑里）或停在本设备见过的旧修订上的，以本设备的版本作为新修订重新推送；历史分叉的，无 base 合并、两边的值都保留。
 3. 否则增量拉取（`since` = 本地 `seq`，每页 500，直到 `has_more = false`），把远端修订并入本地：收到的修订号小于本地已知的视为回滚，计数并忽略；本地有未推送修改时三方合并（[条目格式.md](条目格式.md) §7）；解不开的记录原样保存并报告，不合并。然后推送待发修改（每批 100 条，`atomic: false`）；有 `conflict` 就再拉取合并、再推送，最多 8 轮。
-4. `GET …/digest` 与本地计算的摘要比较，不一致则全量对账后再推一次。
+4. `GET …/digest` 与本地计算的摘要比较。不一致而摘要响应里的 `vault_seq` 大于本地已同步到的 `seq`（拉取之后服务端又有写入：其他设备，或本机刚推送的）时，先再拉取、推送一轮再比较（每次同步每个保险库最多比较 3 次）；在同一 `seq` 上仍不一致，或 3 次都不一致，才全量对账后再推一次。
+   - `GET /v1/account` 不再列出的保险库跳过（本地副本保留，见 §5）。
 5. 保存服务端 `epoch` 和同步时间。
 
 不变量：本地待发修改只有在服务端确认了**这一次**操作（相同 `op_id`）后才删除；合并从不丢值；无法解密的记录不会被覆盖。
@@ -323,8 +329,9 @@
 
 - `att`、`item` 必须是 UUID，blob 不能为空，大小上限 `max_attachment_mb`（默认 100 MiB）。
 - blob 不可变：同一个 `att` 再次上传相同内容（SHA-256 相同）直接返回成功（幂等），内容不同返回 409。
-- 服务端写到 `data/attachments/<att>`（先写 `.part` 再改名），记录所属保险库、条目、大小、SHA-256。服务端不检查条目是否存在，也不解密。
-- 客户端流程：生成附件 ID（UUIDv4）和 FK → 加密 → 上传 → 比对返回的 `sha256` → 把附件元数据（含 FK 和 `blob_sha256`）写进条目内容，随下一次同步推送。下载后先比对 `blob_sha256` 再解密。
+- 附件 ID 全局唯一：同一个 `att` 已存在于**另一个**保险库时返回 409。
+- 服务端先写到每次上传独有的临时文件 `data/attachments/<att>.<随机>.part`、刷盘、读回比对 SHA-256，然后在数据库锁内检查该 ID 是否已登记：已登记（并发上传中别人先完成）则丢弃临时文件、按上一条处理；否则原子改名为 `data/attachments/<att>` 并登记所属保险库、条目、大小、SHA-256。所以并发上传同一 ID 时只有一个成功，文件内容与登记的校验和一致。服务端不检查条目是否存在，也不解密。
+- 客户端流程：生成附件 ID（UUIDv4）和 FK → 加密 → 上传 → 比对返回的 `sha256` → 把附件元数据（含 FK 和 `blob_sha256`）写进条目内容，随下一次同步推送。下载后先比对 `blob_sha256` 并解密成功，**才**存入本地缓存；不一致返回错误、不缓存。本地缓存的副本校验失败时丢弃并重新下载。
 - 附件只在其条目被永久删除时删除（§6.5）。
 
 ## 8. 设备
@@ -334,9 +341,9 @@
 | GET | `/v1/devices` | 用户 | `[DeviceRecord]`，按最后在线时间倒序 |
 | DELETE | `/v1/devices/{device}` | 用户 | `{}`；不存在或已吊销 404 |
 
-`DeviceRecord`：`{ "id", "name", "platform", "client_version", "created_at", "last_seen_at", "revoked_at"?, "current" }`，`current` 表示发出请求的设备。吊销：设置 `revoked_at`、删除该设备的全部会话、向该账户推送 `device_revoked` 事件、审计 `device_revoke`。吊销后的设备不能再刷新会话；用密码重新登录时同一设备 ID 不会被复用，而是新建一个设备。
+`DeviceRecord`：`{ "id", "name", "platform", "client_version", "created_at", "last_seen_at", "revoked_at"?, "current" }`，`current` 表示发出请求的设备。吊销：设置 `revoked_at`（设备行保留）、向该账户推送 `device_revoked` 事件、审计 `device_revoke`。该设备的会话**不删除**：它的 access / refresh token 此后都返回 401 `device_revoked`，会话到期后按普通过期清理。登录时出示已吊销的设备 ID 也返回 `device_revoked`（§3.2）。
 
-注意：吊销等于“强制退出”，不是封禁。被吊销的设备如果仍处于解锁状态，`npw-core` 收到 401 后会用内存里的 LOGIN 自动重新登录并得到一个新设备（见威胁模型 §3.8）。
+`npw-core` 收到 `device_revoked` 后不重新登录，而是在本地退出并清除该账户的全部本地数据（§3.3）——吊销是给丢失的设备用的。用户在同一台设备上重新输入 Secret Key 登录会得到一个新设备。
 
 ## 9. 事件（WebSocket）
 
@@ -353,12 +360,12 @@
 | 事件 | 何时 | 客户端 |
 |---|---|---|
 | `vault_changed` | 推送写入了条目（发给该保险库所有成员账户的连接，包括写入者自己） | 同步该保险库 |
-| `account_changed` | 保险库元数据被修改；或服务端事件队列溢出（连接落后太多，发它代替丢失的事件） | 全部同步 |
+| `vault_changed` | 永久删除了条目（§6.5） | 同步该保险库 |
+| `account_changed` | 保险库元数据被修改、新建了保险库、改了主密码；或服务端事件队列溢出（连接落后太多，发它代替丢失的事件） | 全部同步 |
 | `device_revoked` | 该账户有设备被吊销 | 如果是本设备：清除会话；服务端发完这条后关闭本设备的连接 |
 
 - 服务端每 30 秒发一次 Ping；客户端关闭或出错即结束。
 - 事件只是“该同步了”的提示，不携带数据；断线期间客户端每隔几分钟轮询兜底。
-- 新建保险库、改主密码、永久删除**不**发事件。
 
 ## 10. 管理 API
 
@@ -373,8 +380,8 @@
 | GET | `/v1/admin/invites` | — | 最近 50 个邀请码的 `{ "code": "", "expires_at", "used_at"? }`（服务端只存哈希，`code` 恒为空） |
 | POST | `/v1/admin/invites` | `{ "hours" }` | `{ "code", "expires_at" }`，有效期限制在 1–720 小时；明文邀请码只在这里出现一次 |
 | GET | `/v1/admin/audit` | — | 全部账户的最近 500 条审计，`detail` 后附 ` [账户 ID 前 8 位]` |
-| GET | `/v1/admin/backup` | — | `BackupStatus`：设置（含通知渠道的配置）、服务端 age 公钥、每个目标及其最后成功 / 尝试时间和错误、最近 30 次备份、20 次演练、最后成功时间、最后一次手动演练确认时间、是否有未备份的变更 |
-| PUT | `/v1/admin/backup/settings` | `BackupSettings` | `{}`。`recipients` 必须都是 age X25519 公钥（`age1…`），`daily_hour_utc ≤ 23`，`debounce_minutes ≤ 1440`。整个设置用 `server.key` 加密后存库 |
+| GET | `/v1/admin/backup` | — | `BackupStatus`：设置（含通知渠道的配置；已设置的 `smtp_password`、`telegram_bot_token` 显示为掩码 `••••••••`，即 `npw_api::admin::SECRET_MASK`）、服务端 age 公钥、每个目标及其最后成功 / 尝试时间和错误、最近 30 次备份、20 次演练、最后成功时间、最后一次手动演练确认时间、是否有未备份的变更 |
+| PUT | `/v1/admin/backup/settings` | `BackupSettings` | `{}`。`recipients` 必须都是 age X25519 公钥（`age1…`），`daily_hour_utc ≤ 23`，`debounce_minutes ≤ 1440`。`smtp_password` / `telegram_bot_token` 原样传回掩码表示保留已存的值，空字符串表示清除。整个设置用 `server.key` 加密后存库 |
 | PUT | `/v1/admin/backup/targets/{id}` | `BackupTarget` | 保存后的目标（`secret` 清空，`has_secret` 表示是否有密钥）。名称、endpoint 必填；OSS 必须有 bucket；`fs` 必须是绝对路径；其他必须是 http(s) URL。`secret` 为空表示保留原密钥；密钥用 `server.key` 加密存库 |
 | DELETE | `/v1/admin/backup/targets/{id}` | — | `{}` |
 | POST | `/v1/admin/backup/targets/{id}/test` | — | `{ "steps": [{ "step": "write"/"read"/"delete", "ok", "error"?, "expected_to_fail"? }] }`：写、读、删一个探测对象；防删模式下删除失败才是对的 |
@@ -418,6 +425,5 @@ v1 只有单账户、每个保险库只有一个成员，但数据结构已经�
 |---|---|
 | 恢复码：`ReRegisterStartReq`（文档注释提到 `/v1/account/recovery/start`）、`SetRecoveryFinishReq`（`/v1/account/recovery/finish`）、`AccountResp.encrypted_account_key_recovery`、数据库 `opaque_recovery` 列、`feature::RECOVERY_CODE` | 路由**未注册**，功能不宣告。`login/start` 接受 `method: "recovery_code"`，但因为没有办法设置恢复码，它的行为与“账户不存在”相同 |
 | 错误码 `too_large` | 未使用（超限由框架返回 413 纯文本，单条条目过大是推送结果里的 `rejected`） |
-| 服务端配置 `keep_revisions` | 未使用：修订目前全部保留，没有修订清理 |
-| 分页拉取漏墓碑 | `purged` 只按最后一页的 `since` 过滤（`server/src/items.rs` `changes`）。一次同步跨越多页（> 500 个变更）时，较早的墓碑不会送达；全量对账同样从 `since=0` 分页，于是本地仍有该条目的设备会把它当作“服务端丢失”重新上传，已永久删除的条目回到回收站。修正方向：每一页都返回 `since < 墓碑 seq ≤ next_seq` 的墓碑 |
+| 服务端配置 `keep_revisions` | 未使用：修订目前全部保留，没有修订清理。有意不实现：修剪会删掉旧密码的唯一服务端副本，并让全量对账的“服务端历史里有本机的头”（`server_has`）判断失效，使本来只是“服务端更新”的条目被当成历史分叉做无 base 合并 |
 | `Field.generator` 等 | 见条目格式 |
