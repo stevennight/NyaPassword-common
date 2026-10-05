@@ -25,7 +25,41 @@ export interface NotifyConfig {
   smtp_password: string;
   smtp_from: string;
   smtp_to: string;
+  /** Channels switched off although configured (`webhook`, `telegram`, `bark`, `email`). */
+  off: string[];
+  /** Alert events that do not notify (`backup_failed`, `check_failed`, `stale`). */
+  muted_events: string[];
 }
+
+export type Channel = 'webhook' | 'telegram' | 'bark' | 'email';
+export type AlertEvent = 'backup_failed' | 'check_failed' | 'stale';
+
+/** Label and date of an offline recovery key (a `recipients` entry). */
+export interface RecipientInfo {
+  recipient: string;
+  label: string;
+  /** 0: registered before labels existed. */
+  created_at: number;
+}
+
+export interface TestStep {
+  step: string;
+  ok: boolean;
+  expected_to_fail?: boolean;
+  error?: string | null;
+}
+
+export interface AdminSecurity {
+  totp_enabled: boolean;
+}
+
+export interface TotpSetup {
+  secret: string;
+  uri: string;
+}
+
+/** Stands in for a stored secret in GET /backup; sending it back keeps the stored value. */
+export const SECRET_MASK = '••••••••';
 
 export interface BackupSettings {
   retention: { recent: number; daily: number; weekly: number; monthly: number };
@@ -33,6 +67,7 @@ export interface BackupSettings {
   debounce_minutes: number;
   daily_hour_utc: number;
   notify: NotifyConfig;
+  recipient_info: RecipientInfo[];
 }
 
 export interface TargetResult {

@@ -117,6 +117,13 @@ export interface DesktopApi {
   setBiometricAtStart(enabled: boolean): Promise<void>;
 }
 
+/**
+ * The Quick Access shortcut of a new installation (desktop `settings.rs`
+ * `DEFAULT_SHORTCUT`). Ctrl+Shift+Space, the old default, is taken by IDEs
+ * (VS Code / JetBrains parameter hints) and some input methods.
+ */
+export const DEFAULT_SHORTCUT = 'Ctrl+Shift+Alt+Space';
+
 export function desktopApi(bridge: Bridge): DesktopApi | null {
   if (bridge.kind !== 'desktop') return null;
   return (bridge as Bridge & { desktop?: DesktopApi }).desktop ?? null;

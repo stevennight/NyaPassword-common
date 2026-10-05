@@ -357,6 +357,55 @@ mod tests {
         assert!(open(&data, &[wrong]).is_err());
     }
 
+    /// Key pairs made by the admin console's in-browser generator
+    /// (`web/src/apps/admin/agekey.ts`, written by `web/scripts/age-vectors.mjs`)
+    /// work with this crate: same public key, and archives sealed to the
+    /// recipient open with the identity.
+    #[test]
+    fn browser_generated_keys_interoperate() {
+        let v: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../web/src/apps/admin/agekey.vectors.json"
+        ))
+        .unwrap();
+        let mut pairs: Vec<(String, String)> = v["fixed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| {
+                (
+                    p["identity"].as_str().unwrap().to_string(),
+                    p["recipient"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        pairs.push((
+            v["generated"]["identity"].as_str().unwrap().to_string(),
+            v["generated"]["recipient"].as_str().unwrap().to_string(),
+        ));
+        assert_eq!(pairs.len(), 4);
+        let (srv_id, srv_pub) = generate_identity();
+        for (identity, recipient) in pairs {
+            assert_eq!(recipient_of(&identity).unwrap(), recipient);
+            assert!(valid_recipient(&recipient));
+            let m = Manifest {
+                format: 0,
+                created_at: 1_759_536_000_000,
+                server_version: "0.1.0".into(),
+                epoch: "e".into(),
+                accounts: 1,
+                items: 1,
+                revisions: 1,
+                attachments: 0,
+                vaults: Default::default(),
+                files: Default::default(),
+            };
+            let data = seal(m, &[("db.sqlite3", b"db")], &[srv_pub.clone(), recipient]).unwrap();
+            let (_, files) = open(&data, &[identity]).unwrap();
+            assert_eq!(files["db.sqlite3"], b"db");
+            assert!(open(&data, std::slice::from_ref(&srv_id)).is_ok());
+        }
+    }
+
     #[test]
     fn names_and_times() {
         let t = 1_759_579_445_000; // 2025-10-04T12:04:05Z

@@ -5,6 +5,7 @@
   import { bytes, dateTime, errorText } from '$lib/i18n';
   import { confirm, toast } from '$lib/ui.svelte';
   import type { ImportPreview } from '$lib/types';
+  import ExportPanel from './ExportPanel.svelte';
 
   type Step = 'choose' | 'password' | 'preview' | 'done';
   let step = $state<Step>('choose');
@@ -16,8 +17,6 @@
   let error = $state('');
   let result = $state<{ imported: number; attachments: number; problems: string[] } | null>(null);
   let batches = $state<[string, string, number, number][]>([]);
-  let exportFormat = $state<'native' | 'kdbx' | 'csv'>('native');
-  let exportPassword = $state('');
 
   const SOURCES = 'Bitwarden / Vaultwarden（.json、.zip、加密 .json、.csv）、1Password（.1pux、.csv）、KeePass / KeePassXC（.kdbx、.csv）、Chrome / Edge / Google 密码管理器（.csv）';
 
@@ -77,24 +76,6 @@
     toast(`已把 ${k} 个条目移到回收站`);
     await vault.edited();
     await loadBatches();
-  }
-
-  async function doExport() {
-    busy = true;
-    error = '';
-    try {
-      if (exportFormat === 'csv' && !(await confirm('导出明文 CSV？', 'CSV 文件不加密，任何拿到文件的人都能看到全部密码。用完请立即删除。', '仍然导出', true))) return;
-      const data = await vault.bridge.exportVault(exportFormat, exportPassword);
-      const stamp = new Date().toISOString().slice(0, 10);
-      const [ext, mime] = exportFormat === 'native' ? ['npwexport', 'application/octet-stream'] : exportFormat === 'kdbx' ? ['kdbx', 'application/octet-stream'] : ['csv', 'text/csv'];
-      await vault.bridge.saveFile(`NyaPassword-${stamp}.${ext}`, data, mime);
-      exportPassword = '';
-      toast('已导出');
-    } catch (e) {
-      error = errorText(errorCode(e), errorMessage(e));
-    } finally {
-      busy = false;
-    }
   }
 </script>
 
@@ -162,15 +143,7 @@
   {/if}
 
   <h2 style="margin-top:28px">导出</h2>
-  <div class="formats">
-    <label class:on={exportFormat === 'native'}><input type="radio" bind:group={exportFormat} value="native" /> <b>NyaPassword 加密导出</b><span>无损，含附件、通行密钥、历史；用主密码 + Secret Key 打开</span></label>
-    <label class:on={exportFormat === 'kdbx'}><input type="radio" bind:group={exportFormat} value="kdbx" /> <b>KDBX 4（KeePassXC）</b><span>用主密码加密；没有本软件也能用 KeePassXC 打开</span></label>
-    <label class:on={exportFormat === 'csv'}><input type="radio" bind:group={exportFormat} value="csv" /> <b>CSV（明文）</b><span>不加密，仅用于迁移到别的软件</span></label>
-  </div>
-  <div class="row" style="margin-top:10px">
-    <input class="input" type="password" bind:value={exportPassword} placeholder="输入主密码确认" style="max-width:280px" />
-    <button class="btn primary" disabled={busy || !exportPassword} onclick={doExport}>导出</button>
-  </div>
+  <ExportPanel />
 </div>
 
 <style>
@@ -185,8 +158,4 @@
   .stat span { font-size: 12px; color: var(--text-2); }
   .tblwrap { max-height: 380px; overflow: auto; margin: 10px 0; }
   .line { padding: 9px 14px; border-bottom: 1px solid var(--border); }
-  .formats { display: grid; gap: 8px; }
-  .formats label { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); cursor: pointer; }
-  .formats label.on { border-color: var(--accent); background: var(--accent-2); }
-  .formats span { grid-column: 2; font-size: 12.5px; color: var(--text-2); }
 </style>

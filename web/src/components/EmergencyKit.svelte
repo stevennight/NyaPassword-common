@@ -24,7 +24,7 @@
       <dt>账号</dt><dd class="mono">{kit.login}</dd>
       <dt>Secret Key</dt><dd class="mono sk">{kit.secret_key}</dd>
       <dt>主密码</dt><dd class="blank">（手写在这里，或者记在心里）</dd>
-      <dt>备份解密私钥</dt><dd class="blank">（服务端备份用的离线 age 私钥 AGE-SECRET-KEY-…，见管理后台“备份与恢复”）</dd>
+      <dt>备份解密私钥</dt><dd class="blank">（服务端备份用的离线恢复密钥 AGE-SECRET-KEY-…，在管理后台“恢复密钥”生成并单独打印）</dd>
     </dl>
     <div class="qr">{@html qr}<div class="faint small">新设备登录时扫描此码填入服务器、账号和 Secret Key</div></div>
   </div>

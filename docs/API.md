@@ -369,7 +369,7 @@
 
 ## 10. 管理 API
 
-供内嵌的管理后台使用，与用户账户无关。认证：`POST /v1/admin/login` 得到的 token，`Authorization: Bearer <token>`；会话只在服务端内存中（12 小时，重启失效）。管理口令用 `nyapassword-server admin-password` 设置（或首次启动时的 `NYAPASSWORD_ADMIN_PASSWORD`），TOTP 用 `nyapassword-server admin-totp` 开启。
+供内嵌的管理后台使用，与用户账户无关。认证：`POST /v1/admin/login` 得到的 token，`Authorization: Bearer <token>`；会话只在服务端内存中（12 小时，重启失效）。管理口令用 `nyapassword-server admin-password` 设置（或首次启动时的 `NYAPASSWORD_ADMIN_PASSWORD`），TOTP 用 `nyapassword-server admin-totp` 或管理后台“管理员”页开启。修改管理员密码、开关 TOTP 都要在请求里再带一次当前管理员密码，错误时 403 `forbidden`。
 
 | 方法 | 路径 | 请求 | 响应 / 说明 |
 |---|---|---|---|
@@ -380,16 +380,24 @@
 | GET | `/v1/admin/invites` | — | 最近 50 个邀请码的 `{ "code": "", "expires_at", "used_at"? }`（服务端只存哈希，`code` 恒为空） |
 | POST | `/v1/admin/invites` | `{ "hours" }` | `{ "code", "expires_at" }`，有效期限制在 1–720 小时；明文邀请码只在这里出现一次 |
 | GET | `/v1/admin/audit` | — | 全部账户的最近 500 条审计，`detail` 后附 ` [账户 ID 前 8 位]` |
-| GET | `/v1/admin/backup` | — | `BackupStatus`：设置（含通知渠道的配置；已设置的 `smtp_password`、`telegram_bot_token` 显示为掩码 `••••••••`，即 `npw_api::admin::SECRET_MASK`）、服务端 age 公钥、每个目标及其最后成功 / 尝试时间和错误、最近 30 次备份、20 次演练、最后成功时间、最后一次手动演练确认时间、是否有未备份的变更 |
-| PUT | `/v1/admin/backup/settings` | `BackupSettings` | `{}`。`recipients` 必须都是 age X25519 公钥（`age1…`），`daily_hour_utc ≤ 23`，`debounce_minutes ≤ 1440`。`smtp_password` / `telegram_bot_token` 原样传回掩码表示保留已存的值，空字符串表示清除。整个设置用 `server.key` 加密后存库 |
+| GET | `/v1/admin/backup` | — | `BackupStatus`：设置（含 `recipient_info`：每个接收者一项，顺序同 `recipients`，没有记录时 `label` 为空、`created_at` 为 0；含通知渠道的配置；已设置的 `smtp_password`、`telegram_bot_token` 显示为掩码 `••••••••`，即 `npw_api::admin::SECRET_MASK`）、服务端 age 公钥、每个目标及其最后成功 / 尝试时间和错误、最近 30 次备份、20 次演练、最后成功时间、最后一次手动演练确认时间、是否有未备份的变更 |
+| PUT | `/v1/admin/backup/settings` | `BackupSettings` | `{}`。`recipients` 必须都是 age X25519 公钥（`age1…`），`daily_hour_utc ≤ 23`，`debounce_minutes ≤ 1440`。`smtp_password` / `telegram_bot_token` 原样传回掩码表示保留已存的值，空字符串表示清除。`notify.off` / `notify.muted_events` 只能是已知的渠道 / 事件名，否则 400。`recipient_info` 可省略（旧版后台）：已有接收者保留存储的标签和时间，新接收者记当前时间；带了非空 `label` 就更新标签。接收者有增减时写审计 `admin_recipient_add` / `admin_recipient_remove`。整个设置用 `server.key` 加密后存库 |
 | PUT | `/v1/admin/backup/targets/{id}` | `BackupTarget` | 保存后的目标（`secret` 清空，`has_secret` 表示是否有密钥）。名称、endpoint 必填；OSS 必须有 bucket；`fs` 必须是绝对路径；其他必须是 http(s) URL。`secret` 为空表示保留原密钥；密钥用 `server.key` 加密存库 |
 | DELETE | `/v1/admin/backup/targets/{id}` | — | `{}` |
 | POST | `/v1/admin/backup/targets/{id}/test` | — | `{ "steps": [{ "step": "write"/"read"/"delete", "ok", "error"?, "expected_to_fail"? }] }`：写、读、删一个探测对象；防删模式下删除失败才是对的 |
+| POST | `/v1/admin/backup/test-target` | `BackupTarget` | 同上一行的 `{ "steps" }`，但测试的是请求里的（未保存的）目标，校验规则同保存；`secret` 为空时用同 `id` 的已存目标的密钥。“添加目标”向导用它在保存前测试 |
+| POST | `/v1/admin/backup/recipients` | `{ "recipient": "age1…", "label" }` | 登记一个离线恢复密钥（已存在时只更新标签），返回 `[RecipientInfo]`。不是 age X25519 公钥或是服务器自己的公钥时 400 |
+| DELETE | `/v1/admin/backup/recipients/{recipient}` | — | 删除这个接收者，返回 `[RecipientInfo]`（不存在也成功）。已有的备份不受影响 |
 | GET | `/v1/admin/backup/targets/{id}/objects` | — | `[{ "name", "size", "modified_at" }]`，新的在前（时间取自对象名） |
 | POST | `/v1/admin/backup/run` | — | `BackupRun`（立即备份到所有启用的目标） |
 | POST | `/v1/admin/backup/drill` | `{ "target_id"? }` | `DrillRun`（下载最新备份、用服务端 age 私钥解密、`integrity_check`、比对条目数和修订数、抽查 20 个附件存在） |
 | POST | `/v1/admin/backup/manual-drill` | — | `{}`，记录“已用离线私钥手动演练过” |
-| POST | `/v1/admin/notify/test` | — | `{ "failed": ["渠道: 错误"] }`，向所有配置的渠道发测试通知 |
+| POST | `/v1/admin/notify/test` | 可选 `{ "channel"?, "notify"? }` | `{ "failed": ["渠道: 错误"] }`。没有请求体：用已存设置向所有开启的渠道发测试通知。`channel`（`webhook` / `telegram` / `bark` / `email`）：只发这一个，不管开关；未配置时 `failed` 为 `["<渠道>: not configured"]`；未知渠道 400。`notify`：用这份未保存的设置（掩码表示用已存的密钥） |
+| GET | `/v1/admin/security` | — | `{ "totp_enabled" }` |
+| POST | `/v1/admin/password` | `{ "current", "new" }` | `{}`。新密码至少 12 个字符（400）；当前密码错误 403。成功后除本会话外的管理会话全部失效。审计 `admin_password_change` |
+| POST | `/v1/admin/totp/setup` | `{ "password" }` | `{ "secret", "uri" }`：新的 TOTP 密钥（base32）和 `otpauth://` 地址；此时还没有生效 |
+| POST | `/v1/admin/totp/enable` | `{ "password", "secret", "code" }` | `{}`。`code` 必须是这个密钥当前（±30 秒）的验证码，否则 400，什么都不变。审计 `admin_totp_on` |
+| POST | `/v1/admin/totp/disable` | `{ "password" }` | `{}`。审计 `admin_totp_off` |
 
 `BackupTarget`：
 
@@ -401,7 +409,11 @@
 
 `kind`：`oss`、`webdav`、`fs`（服务器上的目录，如 NAS 挂载点）。`protect_mode`：凭据没有删除权限，服务端不对该目标做保留清理（交给存储端生命周期规则）。
 
-`BackupSettings`：`{ "retention": { "recent": 48, "daily": 30, "weekly": 12, "monthly": 24 }, "recipients": ["age1…"], "debounce_minutes": 10, "daily_hour_utc": 19, "notify": { "webhook_url", "telegram_bot_token", "telegram_chat_id", "bark_url", "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_to" } }`。
+`BackupSettings`：`{ "retention": { "recent": 48, "daily": 30, "weekly": 12, "monthly": 24 }, "recipients": ["age1…"], "recipient_info": [{ "recipient": "age1…", "label": "保险柜里的纸", "created_at": 1791158400000 }], "debounce_minutes": 10, "daily_hour_utc": 19, "notify": { "webhook_url", "telegram_bot_token", "telegram_chat_id", "bark_url", "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_to", "off": ["bark"], "muted_events": ["stale"] } }`。
+
+- `recipients` 是权威列表（备份加密给服务器自己的公钥 + 这些公钥）；`recipient_info` 只是标签和登记时间。
+- `notify.off`：已配置但关掉的渠道。`notify.muted_events`：不发通知的事件：`backup_failed`（某个目标写入或读回失败，含连不上）、`check_failed`（自动备份校验失败）、`stale`（超过 26 小时没有成功的备份）。两者缺省为空 = 全部开启。
+- `daily_hour_utc` 是 UTC 小时；管理后台按浏览器时区显示和选择。
 
 备份归档格式见 [加密规格.md](加密规格.md) §11。
 

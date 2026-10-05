@@ -99,6 +99,98 @@ pub struct NotifyConfig {
     pub smtp_from: String,
     #[serde(default)]
     pub smtp_to: String,
+    /// Channels switched off although configured ([`channel`] names). Empty: all on.
+    #[serde(default)]
+    pub off: Vec<String>,
+    /// Alert events that do not notify ([`alert`] names). Empty: all notify.
+    #[serde(default)]
+    pub muted_events: Vec<String>,
+}
+
+/// Notification channel names (`NotifyConfig::off`, `NotifyTestReq::channel`).
+pub mod channel {
+    pub const WEBHOOK: &str = "webhook";
+    pub const TELEGRAM: &str = "telegram";
+    pub const BARK: &str = "bark";
+    pub const EMAIL: &str = "email";
+    pub const ALL: [&str; 4] = [WEBHOOK, TELEGRAM, BARK, EMAIL];
+}
+
+/// Alert events (`NotifyConfig::muted_events`).
+pub mod alert {
+    /// A backup to one or more targets failed (includes an unreachable target).
+    pub const BACKUP_FAILED: &str = "backup_failed";
+    /// The automatic backup check (restore drill) failed.
+    pub const CHECK_FAILED: &str = "check_failed";
+    /// No successful backup for 26 hours.
+    pub const STALE: &str = "stale";
+    pub const ALL: [&str; 3] = [BACKUP_FAILED, CHECK_FAILED, STALE];
+}
+
+/// A label and creation time for one of `BackupSettings::recipients` (an
+/// offline recovery key). Kept next to the list, which stays authoritative.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct RecipientInfo {
+    pub recipient: String,
+    #[serde(default)]
+    pub label: String,
+    /// Unix ms when the server first saw this recipient (0: unknown).
+    #[serde(default)]
+    pub created_at: i64,
+}
+
+/// `POST /v1/admin/backup/recipients`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecipientReq {
+    pub recipient: String,
+    #[serde(default)]
+    pub label: String,
+}
+
+/// `POST /v1/admin/notify/test`. Without a body: every configured channel
+/// with the saved settings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NotifyTestReq {
+    /// Only this channel ([`channel`] name), even when it is switched off.
+    #[serde(default)]
+    pub channel: Option<String>,
+    /// Unsaved settings to test with (masked secrets fall back to the saved ones).
+    #[serde(default)]
+    pub notify: Option<NotifyConfig>,
+}
+
+/// `GET /v1/admin/security`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminSecurity {
+    pub totp_enabled: bool,
+}
+
+/// `POST /v1/admin/password`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminPasswordReq {
+    pub current: String,
+    pub new: String,
+}
+
+/// `POST /v1/admin/totp/setup` and `/totp/disable`: the admin password again.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminConfirmReq {
+    pub password: String,
+}
+
+/// A TOTP secret proposed by `POST /v1/admin/totp/setup` (not active yet).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TotpSetup {
+    pub secret: String,
+    pub uri: String,
+}
+
+/// `POST /v1/admin/totp/enable`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TotpEnableReq {
+    pub password: String,
+    pub secret: String,
+    pub code: String,
 }
 
 /// Everything the backup page edits in one go.
@@ -113,6 +205,9 @@ pub struct BackupSettings {
     /// Daily backup time (UTC hour) even without changes.
     pub daily_hour_utc: u32,
     pub notify: NotifyConfig,
+    /// Labels and dates of `recipients` (added later; may be missing or partial).
+    #[serde(default)]
+    pub recipient_info: Vec<RecipientInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

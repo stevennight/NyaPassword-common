@@ -1,0 +1,48 @@
+{
+  "note": "Test vectors only (not real keys). Written by scripts/age-vectors.mjs from src/apps/admin/agekey.ts.",
+  "fixed": [
+    {
+      "secret_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identity": "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ8H00W3",
+      "recipient": "age19ljhmg68e43yx9fgm2k9lwefquc0la5y4lzvlshdjzv47kxt8d6qr9vf4p"
+    },
+    {
+      "secret_hex": "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+      "identity": "AGE-SECRET-KEY-1WURK6ZNNRZJH60QKC9E9RVNXGH05CTU8A0QFJ243WLA628DE9S4QRFH26J",
+      "recipient": "age1s5s0qzvfxzn4gayt0hwtg0hhtgxm7wsdycup4a8t5j5ca25mfe4qt4hs7q"
+    },
+    {
+      "secret_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "identity": "AGE-SECRET-KEY-1LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLS9FV78X",
+      "recipient": "age1s37q6tph2g60xe0xvz24rparwddq7asn69sf6wn2fkx98t42tg3qvgcz2x"
+    }
+  ],
+  "generated": {
+    "identity": "AGE-SECRET-KEY-13EM382DL7A7VYHW87LFHTKCQNYXFQN36RYFEC0LEXHCWYM043UKST2MNU6",
+    "recipient": "age1yduy8p6ghwj5ce4lkpquwa2l22a30y56hmxsmp5nrrk8wd4zpqws2df5ag",
+    "sheet": {
+      "label": "测试恢复密钥",
+      "createdAt": 1791158400000,
+      "server": "https://vault.example.com",
+      "targets": [
+        {
+          "kind": "oss",
+          "name": "阿里云 OSS",
+          "endpoint": "https://oss-cn-hangzhou.aliyuncs.com",
+          "bucket": "example-backup",
+          "root": "nyapassword",
+          "username": "EXAMPLE-ACCESS-KEY-ID"
+        },
+        {
+          "kind": "fs",
+          "name": "NAS",
+          "endpoint": "/mnt/nas/backup",
+          "bucket": "",
+          "root": "npw",
+          "username": ""
+        }
+      ]
+    },
+    "key_file": "# NyaPassword 备份恢复密钥（age 私钥）\n# 标签：测试恢复密钥\n# 创建：2026-10-05\n# 服务器：https://vault.example.com\n# 公钥：age1yduy8p6ghwj5ce4lkpquwa2l22a30y56hmxsmp5nrrk8wd4zpqws2df5ag\n#\n# 服务器（连同数据目录）整个丢失时，只有这把私钥能解开备份。\n# 恢复（在新服务器上；目标的密码 / AccessKey Secret 用环境变量 NYAPASSWORD_RESTORE_SECRET 传）：\n#   nyapassword-server restore --identity nyapassword-recovery-key.txt --to ./data --kind oss --endpoint https://oss-cn-hangzhou.aliyuncs.com --bucket example-backup --root nyapassword --username EXAMPLE-ACCESS-KEY-ID\n#   nyapassword-server restore --identity nyapassword-recovery-key.txt --to ./data --kind fs --endpoint /mnt/nas/backup --root npw\n#   nyapassword-server restore --identity nyapassword-recovery-key.txt --to ./data --file <备份文件 nyapassword-….tar.zst.age>\n# 只下载、解密、校验，不写入任何东西：在命令末尾加 --dry-run\n# 没有 nyapassword-server 时也可以用 age 解密：age -d -i 本文件 备份文件 > backup.tar.zst\n# 请打印或存到 U 盘，与紧急恢复包放在一起；不要只存在密码库或这台服务器上。\nAGE-SECRET-KEY-13EM382DL7A7VYHW87LFHTKCQNYXFQN36RYFEC0LEXHCWYM043UKST2MNU6\n"
+  }
+}
