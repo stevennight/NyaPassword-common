@@ -13,6 +13,18 @@ pub(crate) async fn call<Req: Serialize, Resp: DeserializeOwned>(
     body: Option<&Req>,
     bearer: Option<&str>,
 ) -> Result<Resp> {
+    call_with_timeout(t, method, path, body, bearer, None).await
+}
+
+/// [`call`] with its own timeout instead of the transport's default.
+pub(crate) async fn call_with_timeout<Req: Serialize, Resp: DeserializeOwned>(
+    t: &dyn Transport,
+    method: &'static str,
+    path: &str,
+    body: Option<&Req>,
+    bearer: Option<&str>,
+    timeout_ms: Option<u32>,
+) -> Result<Resp> {
     let body = match body {
         Some(b) => Some(serde_json::to_vec(b).map_err(|e| CoreError::Invalid(e.to_string()))?),
         None => None,
@@ -24,6 +36,7 @@ pub(crate) async fn call<Req: Serialize, Resp: DeserializeOwned>(
             body,
             content_type: Some("application/json"),
             bearer: bearer.map(str::to_string),
+            timeout_ms,
         })
         .await?;
     decode(resp.status, &resp.body)
@@ -43,6 +56,7 @@ pub(crate) async fn call_raw(
             body,
             content_type: Some("application/octet-stream"),
             bearer: bearer.map(str::to_string),
+            timeout_ms: None,
         })
         .await?;
     if (200..300).contains(&resp.status) {

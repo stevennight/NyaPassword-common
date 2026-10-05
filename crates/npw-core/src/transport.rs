@@ -12,7 +12,14 @@ pub struct HttpRequest {
     pub body: Option<Vec<u8>>,
     pub content_type: Option<&'static str>,
     pub bearer: Option<String>,
+    /// Overrides the transport's default timeout (e.g. a short one for calls
+    /// whose answer does not matter, like logout).
+    pub timeout_ms: Option<u32>,
 }
+
+/// Default timeout of a whole request (the browser's fetch has none).
+#[cfg(feature = "http")]
+const DEFAULT_TIMEOUT_MS: u64 = 120_000;
 
 #[derive(Debug, Clone)]
 pub struct HttpResponse {
@@ -56,7 +63,7 @@ impl ReqwestTransport {
         let client = reqwest::Client::builder()
             .user_agent(concat!("NyaPassword/", env!("CARGO_PKG_VERSION")))
             .connect_timeout(std::time::Duration::from_secs(15))
-            .timeout(std::time::Duration::from_secs(120))
+            .timeout(std::time::Duration::from_millis(DEFAULT_TIMEOUT_MS))
             .build()
             .map_err(|e| CoreError::Network(e.to_string()))?;
         #[cfg(target_arch = "wasm32")]
@@ -73,7 +80,11 @@ impl Transport for ReqwestTransport {
         let url = format!("{}{}", self.base, req.path);
         let method = reqwest::Method::from_bytes(req.method.as_bytes())
             .map_err(|e| CoreError::Network(e.to_string()))?;
-        let mut rb = self.client.request(method, url);
+        let timeout = req.timeout_ms.map_or(DEFAULT_TIMEOUT_MS, u64::from);
+        let mut rb = self
+            .client
+            .request(method, url)
+            .timeout(std::time::Duration::from_millis(timeout));
         if let Some(t) = &req.bearer {
             rb = rb.bearer_auth(t);
         }

@@ -8,6 +8,7 @@
 
   let password = $state('');
   let busy = $state(false);
+  let signingOut = $state(false);
   let error = $state('');
   let quick = $state({ available: false, enabled: false, label: '' });
   let input: HTMLInputElement | undefined = $state();
@@ -47,8 +48,16 @@
 
   async function signOut() {
     if (!(await confirm('退出此设备上的账户？', '会删除此设备上的本地副本。尚未同步的修改会丢失。下次登录需要 Secret Key。', '退出', true))) return;
-    await vault.bridge.signOut(true);
-    await vault.refreshLock();
+    signingOut = true;
+    error = '';
+    try {
+      await vault.bridge.signOut(true);
+      await vault.refreshLock();
+    } catch (e) {
+      error = errorText(errorCode(e), errorMessage(e));
+    } finally {
+      signingOut = false;
+    }
   }
 </script>
 
@@ -66,7 +75,7 @@
     {/if}
     {#if error}<div class="banner bad small" style="margin-top:12px">{error}</div>{/if}
     <p class="faint small foot">离线也能解锁 · 上次同步 {relativeTime(vault.lock?.last_sync_at ?? 0)}</p>
-    <button type="button" class="btn ghost sm" onclick={signOut}>退出此设备上的账户</button>
+    <button type="button" class="btn ghost sm" onclick={signOut} disabled={signingOut || busy}>{signingOut ? '正在退出…' : '退出此设备上的账户'}</button>
   </form>
 </div>
 

@@ -16,6 +16,7 @@
   let next = $state('');
   let next2 = $state('');
   let pwMsg = $state('');
+  let signingOut = $state(false);
   let newVault = $state('');
   let theme = $state(document.documentElement.dataset.theme ?? 'auto');
 
@@ -88,8 +89,15 @@
     const [, pending] = vault.attention;
     const warn = pending ? `还有 ${pending} 处修改没有同步到服务器，退出会丢失它们！` : '会删除此设备上的本地副本。';
     if (!(await confirm('退出此设备上的账户？', `${warn}\n下次登录需要 Secret Key。`, '退出', true))) return;
-    await vault.bridge.signOut(true);
-    await vault.refreshLock();
+    signingOut = true;
+    try {
+      await vault.bridge.signOut(true);
+      await vault.refreshLock();
+    } catch (e) {
+      toast(errorText(errorCode(e), errorMessage(e)), 'error');
+    } finally {
+      signingOut = false;
+    }
   }
 
   const ACTIONS: Record<string, string> = {
@@ -167,7 +175,7 @@
 
   <section class="card">
     <h3>退出</h3>
-    <button class="btn danger" onclick={signOut}>退出此设备上的账户</button>
+    <button class="btn danger" onclick={signOut} disabled={signingOut}>{signingOut ? '正在退出…' : '退出此设备上的账户'}</button>
   </section>
 </div>
 

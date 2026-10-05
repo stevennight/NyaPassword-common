@@ -20,6 +20,8 @@ use crate::{CoreError, Result};
 pub(crate) const META_ACCOUNT: &str = "account";
 pub(crate) const META_SECRET_KEY: &str = "secret_key";
 pub(crate) const META_SESSION: &str = "session";
+/// How long signing out waits for the server to acknowledge the logout.
+const SIGN_OUT_TIMEOUT_MS: u32 = 5_000;
 
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
@@ -926,13 +928,25 @@ impl Client {
                 "{pending} edits have not been synced yet"
             )));
         }
-        if let Ok(token) = self.bearer().await {
-            let _ = api::call::<api::Empty, api::Empty>(
-                &*self.transport()?,
+        // Tell the server, best effort: only with a still-valid access token
+        // (never refresh or sign in again just to sign out) and with a short
+        // timeout, so an unreachable or slow server cannot hold up signing
+        // out. An unused session simply expires on the server.
+        let token = {
+            let st = self.state.lock().expect("state");
+            st.session
+                .as_ref()
+                .filter(|s| s.access_expires_at > npw_model::now_ms() + 5_000)
+                .map(|s| s.access_token.clone())
+        };
+        if let (Some(token), Ok(t)) = (token, self.transport()) {
+            let _ = api::call_with_timeout::<api::Empty, api::Empty>(
+                &*t,
                 "POST",
                 "/v1/auth/logout",
                 Some(&api::Empty {}),
                 Some(&token),
+                Some(SIGN_OUT_TIMEOUT_MS),
             )
             .await;
         }
