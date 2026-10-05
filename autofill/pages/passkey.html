@@ -6,6 +6,8 @@
        verifies the assertion signature itself with WebCrypto. -->
   <button id="create">create</button>
   <button id="get">get</button>
+  <!-- like Google's sign-in challenge: WebAuthn called from a hidden about:blank frame -->
+  <button id="get-blank">get from a hidden about:blank frame</button>
   <pre id="out"></pre>
   <script>
     const out = (s) => (document.getElementById('out').textContent = s);
@@ -35,10 +37,18 @@
       } catch (e) { out('error:' + e.name + ':' + e.message); }
     };
 
+    document.getElementById('get-blank').onclick = async () => {
+      const f = document.createElement('iframe');
+      f.style.display = 'none';
+      document.body.appendChild(f);
+      window.__credentials = f.contentWindow.navigator.credentials;
+      document.getElementById('get').click();
+    };
+
     document.getElementById('get').onclick = async () => {
       try {
         const challenge = rnd(32);
-        const a = await navigator.credentials.get({ publicKey: { challenge, rpId: location.hostname, userVerification: 'required' } });
+        const a = await (window.__credentials ?? navigator.credentials).get({ publicKey: { challenge, rpId: location.hostname, userVerification: 'required' } });
         const cd = JSON.parse(new TextDecoder().decode(a.response.clientDataJSON));
         const key = await crypto.subtle.importKey('spki', saved.spki, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
         const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', a.response.clientDataJSON));
