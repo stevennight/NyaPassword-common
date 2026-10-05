@@ -1,6 +1,22 @@
 [package]
 name = "npw-dev"
+description = "NyaPassword developer CLI: register, sign in, sync, import, export and stress a running server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
+
+[dependencies]
+npw-core.workspace = true
+npw-store-sqlite.workspace = true
+npw-api.workspace = true
+npw-model.workspace = true
+npw-import.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+rand.workspace = true
+tokio.workspace = true
+clap = { version = "4", features = ["derive", "env"] }
+rpassword = "7"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"] }
