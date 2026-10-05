@@ -6,6 +6,7 @@
   import type { Field, ItemContent } from '$lib/types';
   import { desktopApi } from '$lib/desktop';
   import Generator from './Generator.svelte';
+  import RepromptGate from './RepromptGate.svelte';
 
   // desktop-only parts: the auto-type sequence of Quick Access
   const desktop = desktopApi(vault.bridge);
@@ -17,6 +18,9 @@
   let showAdd = $state(false);
   let dirty = $state(false);
   let reveal = $state<Record<string, boolean>>({});
+  /** The saved item asks for verification ("使用前需要验证"); editing shows its secrets. */
+  let savedReprompt = $state(false);
+  const locked = $derived(!!itemId && vault.gated({ vault_id: vaultId, item_id: itemId, reprompt: savedReprompt }));
 
   const KINDS: [string, string][] = [
     ['text', '文本'], ['concealed', '密文'], ['multiline', '多行文本'], ['pin', '数字密码（PIN）'], ['totp', '一次性密码（TOTP）'],
@@ -28,6 +32,7 @@
     try {
       if (itemId) {
         const v = await vault.bridge.item(vaultId, itemId);
+        savedReprompt = !!v.reprompt;
         c = structuredClone($state.snapshot(v.content!)) as ItemContent;
       } else {
         c = await vault.bridge.newItem(vault.newTemplate);
@@ -139,9 +144,14 @@
   const ADDRESS_PARTS: [string, string][] = [['province', '省'], ['city', '市'], ['district', '区'], ['street', '详细地址'], ['postal_code', '邮编'], ['country', '国家']];
 </script>
 
-<svelte:window onkeydown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); void save(); } if (e.key === 'Escape' && !genFor && !showAdd) void cancel(); }} />
+<svelte:window onkeydown={(e) => { if (locked) { if (e.key === 'Escape') vault.editing = null; return; } if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); void save(); } if (e.key === 'Escape' && !genFor && !showAdd) void cancel(); }} />
 
-{#if c}
+{#if c && locked && itemId}
+  <div class="ed">
+    <div class="bar"><h2 class="grow gate-title">{c.title || '（无标题）'}</h2><button class="btn" onclick={() => (vault.editing = null)}>取消</button></div>
+    <RepromptGate {vaultId} {itemId} what="编辑这个条目" />
+  </div>
+{:else if c}
   <div class="ed">
     <div class="bar">
       <input id="ed-title" class="title" bind:value={c.title} oninput={mark} placeholder="标题" />
@@ -232,6 +242,14 @@
         <label class="small muted chk"><input type="checkbox" checked={!!c.autofill?.never} onchange={(e) => { c!.autofill = { ...(c!.autofill ?? {}), never: (e.target as HTMLInputElement).checked }; mark(); }} /> 不要自动填充这个条目</label></div>
     </div>
 
+    <div class="card group">
+      <div class="sec-h">使用前验证</div>
+      <div class="pad col">
+        <label class="small chk"><input id="ed-reprompt" type="checkbox" checked={!!c.reprompt} onchange={(e) => { if ((e.target as HTMLInputElement).checked) c!.reprompt = true; else delete c!.reprompt; mark(); }} /> 使用前需要验证（主密码 / Windows Hello / 指纹）</label>
+        <span class="faint small">查看、复制、填写这个条目的密码等内容前，都要再次验证身份。防的是别人趁你离开时使用已解锁的设备；条目的加密方式不变。</span>
+      </div>
+    </div>
+
     {#if c.template === 'ssh_key' || c.ssh}
       <div class="card group">
         <div class="sec-h">SSH agent（桌面端）</div>
@@ -290,6 +308,7 @@
   .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; position: sticky; top: 0; background: var(--bg); padding: 6px 0; z-index: 2; }
   .title { flex: 1; font-size: 19px; font-weight: 600; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; background: transparent; outline: none; min-width: 0; }
   .title:focus { border-color: var(--accent); background: var(--surface); }
+  .gate-title { margin: 0; font-size: 19px; word-break: break-word; }
   .fav { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--text-2); }
   .group { margin-bottom: 12px; }
   .sec-h { padding: 7px 14px; font-size: 11.5px; font-weight: 600; color: var(--text-3); background: var(--surface-2); border-bottom: 1px solid var(--border); }

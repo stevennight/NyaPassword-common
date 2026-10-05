@@ -180,6 +180,10 @@ pub struct ItemView {
     pub subtitle: String,
     pub favorite: bool,
     pub archived: bool,
+    /// Secrets need the user to verify again (master password / biometrics)
+    /// before they are shown, copied or filled. Enforced by the hosts.
+    #[serde(default)]
+    pub reprompt: bool,
     /// In the trash.
     pub deleted: bool,
     pub tags: Vec<String>,
@@ -213,6 +217,7 @@ impl CachedItem {
             subtitle: c.subtitle(),
             favorite: c.favorite,
             archived: c.archived,
+            reprompt: c.reprompt,
             deleted: self.deleted,
             tags: c.tags.clone(),
             urls: c.urls.iter().map(|u| u.url.clone()).collect(),

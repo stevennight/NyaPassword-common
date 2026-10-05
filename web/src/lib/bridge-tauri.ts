@@ -125,6 +125,8 @@ export async function createBridge(): Promise<Bridge> {
     signIn: (server, login, password, secretKey) => call('sign_in', { server, login, password, secretKey }),
     unlock: (password) => call('unlock', { password }),
     lock: () => call('lock'),
+    verifyUser: (password) => call('verify_user', { password: password || null }),
+    verifyUserOptions: () => call('verify_user_options'),
     signOut: (force) => call('sign_out', { force }),
     emergencyKit: () => call('emergency_kit'),
 

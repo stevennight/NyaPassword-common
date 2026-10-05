@@ -102,6 +102,8 @@ export interface ItemContent {
   title: string;
   favorite?: boolean;
   archived?: boolean;
+  /** Ask for the master password / Windows Hello / biometrics before secrets are shown, copied or filled. */
+  reprompt?: boolean;
   tags?: string[];
   fields: Field[];
   sections?: Section[];
@@ -126,6 +128,8 @@ export interface ItemView {
   subtitle: string;
   favorite: boolean;
   archived: boolean;
+  /** The item asks for verification before use (see ItemContent.reprompt). */
+  reprompt?: boolean;
   deleted: boolean;
   tags: string[];
   urls: string[];

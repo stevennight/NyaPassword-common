@@ -602,13 +602,11 @@ fn common(d: &mut Draft, raw: &Value, ctx: &Ctx) {
         c.updated_at = c.created_at;
     }
     c.archived = !is_blank(raw.get("archivedDate").unwrap_or(&Value::Null));
-    if as_int(raw.get("reprompt")).unwrap_or(0) != 0 {
-        d.warn(tr(
-            locale,
-            "“主密码重新提示”设置未导入",
-            "master password re-prompt setting was not imported",
-        ));
-    }
+    // Bitwarden's "master password re-prompt" (1 = password); any non-zero value asks.
+    c.reprompt = match as_int(raw.get("reprompt")) {
+        Some(n) => n != 0,
+        None => as_bool(raw.get("reprompt")),
+    };
     custom_fields(d, raw);
     for h in raw
         .get("passwordHistory")
@@ -1286,13 +1284,7 @@ pub fn import_csv(bytes: &[u8], locale: &str) -> Result<ImportResult, ImportErro
             let tag = format!("{}/{c}", tr(locale, "集合", "Collections"));
             d.content().tags.push(tag);
         }
-        if !matches!(get("reprompt").trim(), "" | "0") {
-            d.warn(tr(
-                locale,
-                "“主密码重新提示”设置未导入",
-                "master password re-prompt setting was not imported",
-            ));
-        }
+        d.content().reprompt = !matches!(get("reprompt").trim(), "" | "0");
         csv_fields(&mut d, &get("fields"));
         for (i, h) in headers.iter().enumerate() {
             let v = rec.get(i).unwrap_or("");

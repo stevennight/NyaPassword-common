@@ -34,6 +34,9 @@ pub struct PasskeyCandidate {
     pub rp_id: String,
     pub user_name: String,
     pub user_display_name: String,
+    /// The item asks for verification before use (`ItemContent::reprompt`).
+    #[serde(default)]
+    pub reprompt: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,8 +72,18 @@ fn rp_id_for(caller: &PasskeyCaller, requested: Option<&str>) -> Result<String> 
     }
 }
 
+/// A passkey with the item it is stored in.
+struct Stored {
+    vault_id: String,
+    item_id: String,
+    title: String,
+    reprompt: bool,
+    passkey: Passkey,
+}
+
 impl Client {
-    fn all_passkeys(&self) -> Result<Vec<(String, String, String, Passkey)>> {
+    /// The passkeys of every live item.
+    fn all_passkeys(&self) -> Result<Vec<Stored>> {
         let st = self.state.lock().expect("state");
         if st.keys.is_none() {
             return Err(CoreError::Locked);
@@ -81,13 +94,12 @@ impl Client {
             .values()
             .filter(|c| !c.deleted)
             .flat_map(|c| {
-                c.content.passkeys.iter().map(move |p| {
-                    (
-                        c.vault_id.clone(),
-                        c.item_id.clone(),
-                        c.content.title.clone(),
-                        p.clone(),
-                    )
+                c.content.passkeys.iter().map(move |p| Stored {
+                    vault_id: c.vault_id.clone(),
+                    item_id: c.item_id.clone(),
+                    title: c.content.title.clone(),
+                    reprompt: c.content.reprompt,
+                    passkey: p.clone(),
                 })
             })
             .collect())
@@ -104,25 +116,26 @@ impl Client {
         let rp_id = rp_id_for(caller, req.rp_id.as_deref())?;
         let all = self.all_passkeys()?;
         let chosen = npw_passkey::matching(
-            all.iter().map(|(_, _, _, p)| p),
+            all.iter().map(|s| &s.passkey),
             &rp_id,
             &req.allow_credentials,
         );
         Ok(all
             .iter()
-            .filter(|(_, _, _, p)| {
+            .filter(|s| {
                 chosen
                     .iter()
-                    .any(|c| c.id == p.id && c.credential_id == p.credential_id)
+                    .any(|c| c.id == s.passkey.id && c.credential_id == s.passkey.credential_id)
             })
-            .map(|(v, i, t, p)| PasskeyCandidate {
-                vault_id: v.clone(),
-                item_id: i.clone(),
-                passkey_id: p.id.clone(),
-                title: t.clone(),
-                rp_id: p.rp_id.clone(),
-                user_name: p.user_name.clone(),
-                user_display_name: p.user_display_name.clone(),
+            .map(|s| PasskeyCandidate {
+                vault_id: s.vault_id.clone(),
+                item_id: s.item_id.clone(),
+                passkey_id: s.passkey.id.clone(),
+                title: s.title.clone(),
+                rp_id: s.passkey.rp_id.clone(),
+                user_name: s.passkey.user_name.clone(),
+                user_display_name: s.passkey.user_display_name.clone(),
+                reprompt: s.reprompt,
             })
             .collect())
     }
@@ -141,8 +154,7 @@ impl Client {
             serde_json::from_str(request_json).map_err(|e| CoreError::Invalid(e.to_string()))?;
         let rp_id = rp_id_for(caller, req.rp.id.as_deref())?;
         let all = self.all_passkeys()?;
-        npw_passkey::check_excluded(&req, &rp_id, all.iter().map(|(_, _, _, p)| p))
-            .map_err(perr)?;
+        npw_passkey::check_excluded(&req, &rp_id, all.iter().map(|s| &s.passkey)).map_err(perr)?;
         let (mut passkey, response) = match caller {
             PasskeyCaller::Web { origin } => npw_passkey::create(&req, origin),
             PasskeyCaller::AndroidApp { origin } => {

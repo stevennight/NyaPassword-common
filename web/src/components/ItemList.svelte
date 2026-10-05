@@ -56,6 +56,7 @@
           <div class="t">{it.title || '（无标题）'}</div>
           <div class="s">{it.subtitle || (it.urls[0] ? vault.bridge.displayHost(it.urls[0]) : '')}</div>
         </div>
+        {#if it.reprompt}<span class="lock" title="使用前需要验证">🔒</span>{/if}
         {#if it.conflicts > 0}<span class="badge warn">冲突</span>
         {:else if it.rejected}<span class="badge bad">未同步</span>
         {:else if it.pending}<span class="badge" title="尚未同步到服务器">⇡</span>
@@ -80,5 +81,6 @@
   .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .s { font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 18px; }
   .star { color: var(--warn); font-size: 12px; }
+  .lock { font-size: 11px; opacity: .7; }
   .empty { padding: 40px 16px; text-align: center; color: var(--text-3); }
 </style>

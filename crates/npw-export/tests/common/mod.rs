@@ -63,6 +63,7 @@ pub fn login_item() -> ExportItem {
     c.created_at = 1_700_000_000_123;
     c.updated_at = 1_759_536_000_456;
     c.favorite = true;
+    c.reprompt = true;
     c.tags = vec!["工作/开发".into(), "a;b".into()];
     c.fields = vec![
         Field::new("username", "用户名", kind::TEXT)

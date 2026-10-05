@@ -89,6 +89,7 @@ fn sample_items() -> Vec<(String, ItemContent)> {
     full.title = "Full".into();
     full.favorite = true;
     full.archived = true;
+    full.reprompt = true;
     full.tags = vec!["工作/开发".into(), "a".into()];
     full.notes = "多行\n备注".into();
     full.created_at = 1_759_536_000_000;

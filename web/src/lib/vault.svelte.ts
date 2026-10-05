@@ -3,6 +3,7 @@
 import type { Bridge } from './bridge';
 import { errorCode, errorMessage } from './bridge';
 import { errorText } from './i18n';
+import { afterOpen, gated, itemKey, type ItemRef } from './reprompt';
 import { toast } from './ui.svelte';
 import type { ItemFilter, ItemView, LockState, SyncReport, TemplateInfo, VaultView } from './types';
 
@@ -41,6 +42,8 @@ class VaultState {
   /** Bumps when items change, so open views reload. */
   version = $state(0);
   autoLockMinutes = $state(10);
+  /** The item verified for "使用前需要验证" (`itemKey`), while it stays open. */
+  verified = $state<string | null>(null);
 
   private ws: WebSocket | null = null;
   private syncTimer: ReturnType<typeof setInterval> | undefined;
@@ -83,6 +86,7 @@ class VaultState {
     this.items = [];
     this.selected = null;
     this.editing = null;
+    this.verified = null;
     this.phase = 'locked';
   }
 
@@ -151,6 +155,22 @@ class VaultState {
     if (this.items[0] && !this.items.some((i) => i.item_id === this.selected?.item_id)) {
       this.selected = { vault_id: this.items[0].vault_id, item_id: this.items[0].item_id };
     }
+  }
+
+  /** An item was opened: a verification of another item ends. */
+  opened(vaultId: string, itemId: string) {
+    this.verified = afterOpen(this.verified, vaultId, itemId);
+  }
+
+  /** The item's secrets are hidden until the user verifies. */
+  gated(item: ItemRef | null | undefined): boolean {
+    return gated(item, this.verified);
+  }
+
+  /** Verifies the user (master password, or biometrics without one) for this item. */
+  async verify(vaultId: string, itemId: string, password?: string) {
+    await this.bridge.verifyUser(password);
+    this.verified = itemKey(vaultId, itemId);
   }
 
   defaultVault(): string {

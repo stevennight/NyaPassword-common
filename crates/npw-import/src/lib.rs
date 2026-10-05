@@ -246,6 +246,9 @@ fn diff_item(src: &ImportedItem, d: &ItemContent) -> Vec<String> {
     if c.archived != d.archived {
         p.push("archived flag differs".into());
     }
+    if c.reprompt != d.reprompt {
+        p.push("re-prompt flag differs".into());
+    }
     if c.notes != d.notes {
         p.push("notes differ".into());
     }

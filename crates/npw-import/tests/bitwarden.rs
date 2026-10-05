@@ -190,7 +190,10 @@ fn linked_steam_reprompt() {
     let r = bw("zh-CN");
     let it = item(&r, "Linked & Steam");
     assert_eq!(it.mapping, Mapping::Partial);
-    assert_eq!(it.warnings.len(), 2, "{:?}", it.warnings);
+    // Only the linked field; the re-prompt setting is imported, not warned about.
+    assert_eq!(it.warnings.len(), 1, "{:?}", it.warnings);
+    assert!(it.content.reprompt);
+    assert!(!it.warnings.iter().any(|w| w.contains("重新提示")));
     assert_eq!(val(it, "otp"), "steam://JBSWY3DPEHPK3PXP");
     assert_eq!(other(it, "Pass alias").text(), "→ 密码");
     assert_eq!(it.content.sections[0].label, "其他字段");
@@ -638,7 +641,10 @@ fn bitwarden_csv() {
     assert_eq!(other(m, "Account ID").text(), "ACC-1");
     assert_eq!(other(m, "Recovery").text(), "line a\nline b");
     assert_eq!(r.items[1].content.template, "secure_note");
-    assert_eq!(r.items[1].warnings.len(), 1, "reprompt");
+    assert!(r.items[1].warnings.is_empty(), "{:?}", r.items[1].warnings);
+    assert!(r.items[1].content.reprompt, "reprompt column imported");
+    assert!(!m.content.reprompt);
+    assert!(!r.items[2].content.reprompt);
     assert_eq!(r.items[2].content.title, "(untitled)");
     assert!(compare(&r.items, &stored(&r.items)).is_empty());
 }

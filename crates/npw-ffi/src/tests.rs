@@ -322,6 +322,37 @@ fn against_a_server() {
         "wrong_password"
     );
     a.verify_password("correct horse battery".into()).unwrap();
+    // user verification with the biometric key ("使用前需要验证"): no lock state change
+    let k = a.quick_unlock_key().unwrap();
+    a.verify_key(k.clone()).unwrap();
+    assert_eq!(
+        code(a.verify_key(vec![0; 32]).unwrap_err()),
+        "wrong_password"
+    );
+    assert!(a.is_unlocked());
+    a.lock();
+    assert_eq!(code(a.verify_key(k.clone()).unwrap_err()), "locked");
+    a.unlock_with_key(k).unwrap();
+
+    // the item flag reaches the host in every view
+    let mut guarded: serde_json::Value =
+        serde_json::from_str(&a.item(vault.clone(), id.clone()).unwrap()).unwrap();
+    guarded["content"]["reprompt"] = true.into();
+    a.save_item(
+        vault.clone(),
+        Some(id.clone()),
+        guarded["content"].to_string(),
+    )
+    .unwrap();
+    let listed: serde_json::Value =
+        serde_json::from_str(&a.list_items("{}".into()).unwrap()).unwrap();
+    assert_eq!(listed[0]["reprompt"], true);
+    let web: serde_json::Value = serde_json::from_str(
+        &a.autofill_candidates("https://www.example.com/".into(), vec![])
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(web[0]["reprompt"], true);
     a.sync().unwrap();
 
     // a second device signs in with the Secret Key and sees everything

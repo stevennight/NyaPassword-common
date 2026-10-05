@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { vault } from '$lib/vault.svelte';
   import { avatar, confirm, toast, TEMPLATE_ICONS } from '$lib/ui.svelte';
   import { bytes, dateTime, relativeTime } from '$lib/i18n';
@@ -6,11 +7,20 @@
   import FieldRow from './FieldRow.svelte';
   import HistoryModal from './HistoryModal.svelte';
   import Modal from './Modal.svelte';
+  import RepromptGate from './RepromptGate.svelte';
 
   let { vaultId, itemId }: { vaultId: string; itemId: string } = $props();
   let view = $state<ItemView | null>(null);
   let showHistory = $state(false);
   let compare = $state(false);
+
+  // opening this item ends a verification of another one ("使用前需要验证")
+  $effect.pre(() => {
+    const [v, i] = [vaultId, itemId];
+    untrack(() => vault.opened(v, i));
+  });
+  /** Secrets, history and editing stay hidden until the user verifies. */
+  const locked = $derived(vault.gated(view));
 
   $effect(() => {
     void vault.version;
@@ -126,7 +136,7 @@
           <button class="btn sm danger" onclick={purge}>永久删除</button>
         {:else}
           <button class="btn sm" title="收藏" onclick={() => toggle('favorite')}>{c.favorite ? '★' : '☆'}</button>
-          <button class="btn sm primary" disabled={view.read_only} onclick={() => (vault.editing = { vault_id: vaultId, item_id: itemId })}>编辑</button>
+          {#if !locked}<button class="btn sm primary" disabled={view.read_only} onclick={() => (vault.editing = { vault_id: vaultId, item_id: itemId })}>编辑</button>{/if}
           <button class="btn sm" onclick={() => toggle('archived')}>{c.archived ? '取消归档' : '归档'}</button>
           <button class="btn sm danger" onclick={remove}>删除</button>
         {/if}
@@ -144,19 +154,34 @@
         <span>⚠</span>
         <div class="grow">
           <b>同步冲突</b>：{c.conflicts.length} 处在不同设备上被改成了不同的值。两个值都已保留，请选择要用哪个。
-          <div style="margin-top:8px"><button class="btn sm" onclick={() => (compare = true)}>逐项处理</button></div>
+          {#if !locked}<div style="margin-top:8px"><button class="btn sm" onclick={() => (compare = true)}>逐项处理</button></div>{/if}
         </div>
       </div>
     {/if}
 
-    {#each groups as g, gi (gi)}
-      <div class="card sec">
-        {#if g.label}<div class="sec-h">{g.label}</div>{/if}
-        {#each g.fields as f (f.id)}<FieldRow field={f} />{/each}
-      </div>
-    {/each}
+    {#if locked}
+      <RepromptGate {vaultId} {itemId} />
+      {#if view.subtitle}
+        <div class="card sec"><div class="row line"><span class="faint small">摘要</span><span class="grow">{view.subtitle}</span></div></div>
+      {/if}
+    {:else}
+      {#each groups as g, gi (gi)}
+        <div class="card sec">
+          {#if g.label}<div class="sec-h">{g.label}</div>{/if}
+          {#each g.fields as f (f.id)}<FieldRow field={f} />{/each}
+        </div>
+      {/each}
+    {/if}
 
-    {#if c.passkeys?.length}
+    {#if locked && (c.passkeys?.length || c.attachments?.length || c.notes)}
+      <div class="card sec">
+        <div class="row line faint small">
+          {[c.passkeys?.length ? `通行密钥 ${c.passkeys.length} 个` : '', c.attachments?.length ? `附件 ${c.attachments.length} 个` : '', c.notes ? '备注' : ''].filter(Boolean).join(' · ')}：验证后显示
+        </div>
+      </div>
+    {/if}
+
+    {#if c.passkeys?.length && !locked}
       <div class="card sec">
         <div class="sec-h">通行密钥</div>
         {#each c.passkeys as p (p.id)}
@@ -181,11 +206,11 @@
       </div>
     {/if}
 
-    {#if c.notes}
+    {#if c.notes && !locked}
       <div class="card sec"><div class="sec-h">备注</div><div class="notes">{c.notes}</div></div>
     {/if}
 
-    {#if c.attachments?.length}
+    {#if c.attachments?.length && !locked}
       <div class="card sec">
         <div class="sec-h">附件</div>
         {#each c.attachments as at (at.id)}
@@ -198,15 +223,16 @@
       <span>修改于 {dateTime(c.updated_at)}</span>
       <span>创建于 {dateTime(c.created_at)}</span>
       {#if view.pending}<span class="badge">尚未同步</span>{/if}
-      <button class="link" onclick={() => (showHistory = true)}>历史版本{view.revision ? `（${view.revision}）` : ''}</button>
+      {#if locked}<span class="badge">🔒 使用前需要验证</span>
+      {:else}<button class="link" onclick={() => (showHistory = true)}>历史版本{view.revision ? `（${view.revision}）` : ''}</button>{/if}
       {#if c.history?.length}<span>密码历史 {c.history.length} 条</span>{/if}
       <span>格式 {c.format}</span>
     </div>
   </div>
 
-  {#if showHistory}<HistoryModal {vaultId} {itemId} current={c} onclose={() => (showHistory = false)} />{/if}
+  {#if showHistory && !locked}<HistoryModal {vaultId} {itemId} current={c} onclose={() => (showHistory = false)} />{/if}
 
-  {#if compare}
+  {#if compare && !locked}
     <Modal title="处理同步冲突" onclose={() => (compare = false)} width={640}>
       <p class="muted small">左边是现在保留的值，右边是另一台设备上的值。选了哪个都不会丢：另一个值仍在历史版本里。</p>
       {#each c.conflicts ?? [] as cf (cf.id)}

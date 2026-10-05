@@ -866,6 +866,25 @@ impl Client {
         self.finish_unlock(ak, None)
     }
 
+    /// Checks that `key` (from a host's biometric quick-unlock store) is this
+    /// account's key, without changing the lock state. Only while unlocked:
+    /// hosts use it to re-verify the user before using an item marked
+    /// `reprompt` (see also [`Client::verify_password`]).
+    pub fn verify_key(&self, key: &[u8]) -> Result<()> {
+        if !self.is_unlocked() {
+            return Err(CoreError::Locked);
+        }
+        let acc = self.account()?;
+        let ak = Key32::from_slice(key)?;
+        envelope::open(
+            &ak,
+            &d64(&acc.encrypted_private_key)?,
+            &aad::account_private_key(&uuid_bytes(&acc.account_id)?),
+        )
+        .map(|mut plain| plain.zeroize())
+        .map_err(|_| CoreError::WrongPassword)
+    }
+
     fn finish_unlock(&self, ak: Key32, login: Option<Key32>) -> Result<()> {
         let acc = self.account()?;
         let mut vault_keys = HashMap::new();

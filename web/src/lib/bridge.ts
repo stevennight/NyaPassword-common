@@ -38,6 +38,15 @@ export interface Bridge {
   signOut(force: boolean): Promise<void>;
   emergencyKit(): Promise<EmergencyKit>;
 
+  /**
+   * Verifies the user again without changing the lock state, before using an
+   * item marked "使用前需要验证": the master password, or (desktop) Windows
+   * Hello when `password` is omitted. Rejects with `wrong_password` / a message.
+   */
+  verifyUser(password?: string): Promise<void>;
+  /** Whether `verifyUser()` without a password (biometrics) can be offered, and its label. */
+  verifyUserOptions(): Promise<{ biometric: boolean; label: string }>;
+
   /** Biometric / OS unlock (Windows Hello, Touch ID). */
   quickUnlockStatus(): Promise<{ available: boolean; enabled: boolean; label: string }>;
   setQuickUnlock(enabled: boolean): Promise<void>;

@@ -237,6 +237,13 @@ impl NpwClient {
         Ok(self.inner.unlock_with_key(&key)?)
     }
 
+    /// Checks a key from [`NpwClient::quick_unlock_key`] (released by biometrics)
+    /// without changing the lock state: user verification before using an item
+    /// marked `reprompt`. Only while unlocked.
+    pub fn verify_key(&self, key: Vec<u8>) -> Res<()> {
+        Ok(self.inner.verify_key(&key)?)
+    }
+
     /// Forgets all keys and decrypted data.
     pub fn lock(&self) {
         self.inner.lock();

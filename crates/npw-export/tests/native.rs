@@ -39,6 +39,7 @@ fn round_trip_is_lossless() {
         common::RECOVERY
     );
     assert_eq!(login.content.extra["future_key"]["n"][2], 3);
+    assert!(login.content.reprompt, "re-prompt setting kept");
     assert!(opened[1].items[0].deleted);
     assert!(opened[2].items.is_empty());
 }

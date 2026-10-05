@@ -12,6 +12,7 @@
     "title": { "type": "string" },
     "favorite": { "type": "boolean" },
     "archived": { "type": "boolean" },
+    "reprompt": { "type": "boolean", "description": "Ask the user to verify (master password, Windows Hello, biometrics) before secrets are shown, copied or filled. A UI guard, not encryption" },
     "tags": { "type": "array", "items": { "type": "string" }, "description": "Nested tags use '/'" },
     "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
     "sections": { "type": "array", "items": { "$ref": "#/$defs/section" } },

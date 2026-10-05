@@ -134,6 +134,23 @@ impl NpwClient {
         self.inner.unlock_with_key(key).map_err(js_err)
     }
 
+    /// Checks the master password without changing the lock state (user
+    /// verification before using an item marked `reprompt`).
+    #[wasm_bindgen(js_name = verifyPassword)]
+    pub fn verify_password(&self, password: &str) -> Result<(), JsValue> {
+        self.inner
+            .verify_password(password)
+            .map(drop)
+            .map_err(js_err)
+    }
+
+    /// Checks a key from [`NpwClient::quick_unlock_key`] without changing the
+    /// lock state. Only while unlocked.
+    #[wasm_bindgen(js_name = verifyKey)]
+    pub fn verify_key(&self, key: &[u8]) -> Result<(), JsValue> {
+        self.inner.verify_key(key).map_err(js_err)
+    }
+
     pub fn lock(&self) {
         self.inner.lock();
     }

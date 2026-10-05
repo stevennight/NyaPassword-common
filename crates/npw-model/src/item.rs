@@ -314,6 +314,11 @@ pub struct ItemContent {
     pub favorite: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub archived: bool,
+    /// Ask the user to verify (master password, Windows Hello, biometrics)
+    /// before showing, copying or filling this item's secrets. A UI guard, not
+    /// encryption: the item is encrypted like any other.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub reprompt: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     #[serde(default)]
@@ -353,6 +358,7 @@ impl ItemContent {
             title: title.into(),
             favorite: false,
             archived: false,
+            reprompt: false,
             tags: vec![],
             fields: vec![],
             sections: vec![],
@@ -511,5 +517,18 @@ mod tests {
         assert_eq!(b.history.len(), 1);
         assert_eq!(b.history[0].value, "old");
         assert!(b.updated_at > a.updated_at);
+    }
+
+    #[test]
+    fn reprompt_is_omitted_when_false() {
+        let mut a = ItemContent::new("login", "Site");
+        let v = serde_json::to_value(&a).unwrap();
+        assert!(v.get("reprompt").is_none());
+        a.reprompt = true;
+        let v = serde_json::to_value(&a).unwrap();
+        assert_eq!(v["reprompt"], Value::Bool(true));
+        let back: ItemContent = serde_json::from_value(v).unwrap();
+        assert!(back.reprompt);
+        assert!(back.extra.is_empty());
     }
 }

@@ -453,6 +453,43 @@ mod tests {
     }
 
     #[test]
+    fn reprompt_merges_like_other_flags() {
+        let base = login();
+        // Turned on here, title changed there: both survive.
+        let mut l = base.clone();
+        l.reprompt = true;
+        let mut r = base.clone();
+        r.title = "GitHub (work)".into();
+        let m = merge_items(Some(&base), &l, &r, "d");
+        assert_eq!(m.new_conflicts, 0);
+        assert!(m.content.reprompt);
+        assert_eq!(m.content.title, "GitHub (work)");
+
+        // Turned off on one side only: off.
+        let mut on = base.clone();
+        on.reprompt = true;
+        let mut off = on.clone();
+        off.reprompt = false;
+        let mut r = on.clone();
+        r.favorite = true;
+        let m = merge_items(Some(&on), &off, &r, "d");
+        assert_eq!(m.new_conflicts, 0);
+        assert!(!m.content.reprompt);
+        assert!(m.content.favorite);
+
+        // Turned on on both sides: no conflict.
+        let m = merge_items(Some(&base), &on, &on.clone(), "d");
+        assert_eq!(m.new_conflicts, 0);
+        assert!(m.content.reprompt);
+
+        // No common base and only one side has it: kept (the edit wins).
+        let m = merge_items(None, &on, &base, "d");
+        assert!(m.content.reprompt);
+        let m = merge_items(None, &base, &on, "d");
+        assert!(m.content.reprompt);
+    }
+
+    #[test]
     fn no_base_still_merges() {
         let l = login();
         let mut r = login();

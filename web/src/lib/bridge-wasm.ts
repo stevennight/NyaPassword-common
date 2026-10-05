@@ -122,6 +122,11 @@ export async function createBridge(opts: WasmBridgeOptions = {}): Promise<Bridge
     },
     unlock: async (password) => client.unlock(password),
     lock: async () => client.lock(),
+    verifyUser: async (password) => {
+      if (!password) throw { code: 'invalid', message: '请输入主密码' };
+      client.verifyPassword(password);
+    },
+    verifyUserOptions: async () => ({ biometric: false, label: '' }),
     signOut: async (force) => {
       await client.signOut(force);
       await idbPut('snapshot', undefined);
