@@ -8,6 +8,7 @@
     "dev": "vite",
     "wasm": "node scripts/build-wasm.mjs",
     "build": "node scripts/build-wasm.mjs && vite build",
+    "dev:desktop": "vite --mode desktop",
     "build:desktop": "vite build --mode desktop",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run"
@@ -22,6 +23,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.1",
     "qrcode-generator": "^2.0.4"
   }
 }

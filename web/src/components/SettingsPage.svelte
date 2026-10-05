@@ -121,6 +121,10 @@
       <select class="select" style="width:auto" value={theme} onchange={(e) => setTheme((e.target as HTMLSelectElement).value)}><option value="auto">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
   </section>
 
+  {#if vault.bridge.kind === 'desktop'}
+    {#await import('./desktop/DesktopSettings.svelte') then m}<m.default />{/await}
+  {/if}
+
   <section class="card">
     <h3>保险库</h3>
     {#each vault.vaults as v (v.id)}
