@@ -123,8 +123,9 @@
       const id = await vault.bridge.saveItem(vaultId, itemId, $state.snapshot(c) as ItemContent);
       dirty = false;
       if (close) {
-        vault.editing = null;
+        // read the props before closing: they come from `vault.editing`, which is null afterwards
         vault.selected = { vault_id: vaultId, item_id: id };
+        vault.editing = null;
         toast('已保存');
       }
       await vault.edited();
