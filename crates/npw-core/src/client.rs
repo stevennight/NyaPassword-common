@@ -154,6 +154,9 @@ pub struct Client {
     factory: TransportFactory,
     pub(crate) state: Mutex<State>,
     pub(crate) sync_lock: async_lock::Mutex<()>,
+    /// One session renewal at a time: a refresh token is single-use, so two
+    /// callers renewing at once would make the second one fail.
+    session_lock: async_lock::Mutex<()>,
 }
 
 /// What the user must keep: shown once after registration, printable as the Emergency Kit.
@@ -260,6 +263,7 @@ impl Client {
                 cache: Cache::default(),
             }),
             sync_lock: async_lock::Mutex::new(()),
+            session_lock: async_lock::Mutex::new(()),
         };
         if let Some(acc) = account {
             *client.transport.write().expect("lock") = Some((client.factory)(&acc.server_url)?);
@@ -1025,9 +1029,22 @@ impl Client {
     /// A valid access token, refreshing (or silently re-logging in) when needed.
     pub(crate) async fn bearer(&self) -> Result<String> {
         let session = self.state.lock().expect("state").session.clone();
-        let now = npw_model::now_ms();
         match session {
-            Some(s) if s.access_expires_at > now + 60_000 => Ok(s.access_token),
+            Some(s) if access_fresh(&s) => Ok(s.access_token),
+            _ => self.renew(None).await,
+        }
+    }
+
+    /// Renews the session: with the refresh token, else by signing in again
+    /// silently. `refused` is an access token the server just rejected.
+    /// Callers that wait here while another one renews use its new session.
+    async fn renew(&self, refused: Option<&str>) -> Result<String> {
+        let _guard = self.session_lock.lock().await;
+        let session = self.state.lock().expect("state").session.clone();
+        match session {
+            Some(s) if access_fresh(&s) && refused != Some(s.access_token.as_str()) => {
+                Ok(s.access_token)
+            }
             Some(s) => self.refresh(&s.refresh_token).await,
             None => self.relogin().await,
         }
@@ -1099,8 +1116,7 @@ impl Client {
         let token = self.bearer().await?;
         match api::call(&*t, method, path, body, Some(&token)).await {
             Err(e) if is_unauthorized(&e) => {
-                self.state.lock().expect("state").session = None;
-                let token = self.relogin().await?;
+                let token = self.renew(Some(&token)).await?;
                 api::call(&*t, method, path, body, Some(&token)).await
             }
             other => other,
@@ -1127,8 +1143,7 @@ impl Client {
         let token = self.bearer().await?;
         match api::call_raw(&*t, method, path, body.clone(), Some(&token)).await {
             Err(e) if is_unauthorized(&e) => {
-                self.state.lock().expect("state").session = None;
-                let token = self.relogin().await?;
+                let token = self.renew(Some(&token)).await?;
                 api::call_raw(&*t, method, path, body, Some(&token)).await
             }
             other => other,
@@ -1341,4 +1356,9 @@ impl Client {
             vaults: self.vaults()?,
         })
     }
+}
+
+/// The access token is good for at least another minute.
+fn access_fresh(s: &api_t::Session) -> bool {
+    s.access_expires_at > npw_model::now_ms() + 60_000
 }

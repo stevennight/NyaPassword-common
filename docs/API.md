@@ -161,7 +161,7 @@
 - 设备被吊销后，它的 access token 和 refresh token 都返回 401 `device_revoked`（吊销不删除会话，会话到期后按普通过期清理）。
 - `POST /v1/auth/logout`（用户）→ `{}`：删除本设备的所有会话。
 - 用 access token 的请求每 5 分钟最多更新一次设备的 `last_seen_at`。
-- `npw-core`：access token 离过期不到 1 分钟时先 refresh；请求得到 401 `unauthorized`（或 refresh 得到 `unauthorized`）时，如果本机处于解锁状态（内存里有 LOGIN），静默重新走一遍 OPAQUE 登录（带上本机的设备 ID）。得到 `device_revoked`（任何请求、refresh 或重新登录）时**不再重试**：本机视为丢失，`npw-core` 立即在本地退出并清除该账户的一切——账户状态、Secret Key、会话、整个本地副本（含未推送的修改）、缓存的附件——然后返回 `device_revoked` 错误；之后宿主调用 `sign_out` 也会成功。
+- `npw-core`：access token 离过期不到 1 分钟、或请求得到 401 `unauthorized` 时先 refresh；refresh 也得到 `unauthorized` 时，如果内存里有 LOGIN（用主密码解锁），静默重新走一遍 OPAQUE 登录（带上本机的设备 ID），否则（PIN / 生物识别解锁）返回 `session_expired`。续期同一时间只进行一次：refresh token 只能用一次，并发的请求等前一个续期完成后直接用新会话，避免第二个请求拿已作废的 refresh token 失败。得到 `device_revoked`（任何请求、refresh 或重新登录）时**不再重试**：本机视为丢失，`npw-core` 立即在本地退出并清除该账户的一切——账户状态、Secret Key、会话、整个本地副本（含未推送的修改）、缓存的附件——然后返回 `device_revoked` 错误；之后宿主调用 `sign_out` 也会成功。
 
 ## 4. 账户
 
