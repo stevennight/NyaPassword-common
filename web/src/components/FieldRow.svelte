@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { copyValue, isSecret } from '$lib/item-actions';
+  import { openExternal } from '$lib/links';
+  import { openMenu } from '$lib/menu.svelte';
   import { vault } from '$lib/vault.svelte';
-  import { toast } from '$lib/ui.svelte';
   import type { Field } from '$lib/types';
   import TotpCode from './TotpCode.svelte';
   import Modal from './Modal.svelte';
@@ -9,7 +11,7 @@
   let shown = $state(false);
   let large = $state(false);
 
-  const secret = $derived(['concealed', 'pin'].includes(field.kind));
+  const secret = $derived(isSecret(field));
   const text = $derived(fieldText(field));
 
   function fieldText(f: Field): string {
@@ -23,20 +25,30 @@
     return JSON.stringify(v);
   }
 
-  async function copy(t: string, label = field.label) {
-    let value = t;
-    if (field.kind === 'totp') {
-      value = vault.bridge.otpCode(t, Math.floor(Date.now() / 1000))?.code ?? '';
-    }
-    await vault.bridge.copy(value, secret || field.kind === 'totp');
-    toast(secret || field.kind === 'totp' ? `已复制${label}，90 秒后清除` : `已复制${label}`);
+  function copy(t: string, label = field.label) {
+    return copyValue(field, t, label);
+  }
+
+  function contextMenu(e: MouseEvent) {
+    // selected text keeps the usual menu (copy the selection)
+    if (window.getSelection()?.toString()) return;
+    openMenu(e, [
+      { label: field.kind === 'totp' ? '复制验证码' : field.multiline ? '全部复制' : '复制', run: () => copy(text) },
+      isUrl ? { label: '打开链接', run: () => openExternal(text).catch(vault.fail.bind(vault)) } : null,
+      secret ? { label: shown ? '隐藏' : '显示', run: () => (shown = !shown) } : null,
+      field.multiline && lines.length > 1
+        ? { label: '按行复制', run: () => (large = true) }
+        : secret
+          ? { label: '大字显示', run: () => (large = true) }
+          : null,
+    ].filter((x) => x !== null));
   }
 
   const lines = $derived(text.split('\n').filter((l) => l.trim()));
   const isUrl = $derived(field.kind === 'url' && /^https?:\/\//.test(text));
 </script>
 
-<div class="field">
+<div class="field" role="group" oncontextmenu={contextMenu}>
   <div class="lab">{field.label || field.id}</div>
   <div class="val" class:mono={secret || field.kind === 'totp' || field.kind === 'pin'}>
     {#if field.kind === 'totp'}

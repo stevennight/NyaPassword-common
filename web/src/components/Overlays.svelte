@@ -1,5 +1,6 @@
 <script lang="ts">
   import { confirmState, toasts } from '$lib/ui.svelte';
+  import ContextMenu from './ContextMenu.svelte';
 
   function answer(v: boolean) {
     confirmState.req?.resolve(v);
@@ -12,6 +13,8 @@
     <div class="toast {t.kind}">{t.text}</div>
   {/each}
 </div>
+
+<ContextMenu />
 
 {#if confirmState.req}
   {@const r = confirmState.req}

@@ -15,6 +15,7 @@ import { listen } from '@tauri-apps/api/event';
 import type { Bridge } from './bridge';
 import type { DesktopApi, DesktopInfo, DesktopSettings, UpdateCheck } from './desktop';
 import type { Field, Generated, ImportPreview, OtpCode, TemplateInfo } from './types';
+import { installDesktopWebview } from './desktop-webview';
 import { locale } from './i18n';
 import { toast } from './ui.svelte';
 import { vault } from './vault.svelte';
@@ -93,6 +94,7 @@ async function listenToApp() {
 }
 
 export async function createBridge(): Promise<Bridge> {
+  installDesktopWebview();
   const loc = locale();
   const [templates, presets] = await Promise.all([
     call<TemplateInfo[]>('templates', { locale: loc }),

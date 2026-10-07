@@ -1,6 +1,9 @@
 <script lang="ts">
   import { vault } from '$lib/vault.svelte';
   import { avatar } from '$lib/ui.svelte';
+  import { itemMenu } from '$lib/item-actions';
+  import { openMenu } from '$lib/menu.svelte';
+  import type { ItemView } from '$lib/types';
   import NewItemMenu from './NewItemMenu.svelte';
 
   let q = $state(vault.query);
@@ -15,6 +18,16 @@
   function select(v: string, i: string) {
     vault.editing = null;
     vault.selected = { vault_id: v, item_id: i };
+  }
+
+  async function contextMenu(e: MouseEvent, it: ItemView) {
+    e.preventDefault();
+    select(it.vault_id, it.item_id);
+    try {
+      openMenu(e, itemMenu(await vault.bridge.item(it.vault_id, it.item_id)));
+    } catch (err) {
+      vault.fail(err);
+    }
   }
 
   function keys(e: KeyboardEvent) {
@@ -50,7 +63,7 @@
   <div class="items">
     {#each vault.items as it (it.vault_id + it.item_id)}
       {@const a = avatar(it.title, it.template)}
-      <button id="it-{it.item_id}" class="item" class:on={it.item_id === vault.selected?.item_id} onclick={() => select(it.vault_id, it.item_id)}>
+      <button id="it-{it.item_id}" class="item" class:on={it.item_id === vault.selected?.item_id} onclick={() => select(it.vault_id, it.item_id)} oncontextmenu={(e) => contextMenu(e, it)}>
         <div class="ico" style="background:{a.color}">{a.letter}</div>
         <div class="grow">
           <div class="t">{it.title || '（无标题）'}</div>

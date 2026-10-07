@@ -1,7 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { vault } from '$lib/vault.svelte';
-  import { avatar, confirm, toast, TEMPLATE_ICONS } from '$lib/ui.svelte';
+  import { avatar, toast, TEMPLATE_ICONS } from '$lib/ui.svelte';
+  import { moveToTrash, purgeItem, restoreFromTrash, toggleFlag } from '$lib/item-actions';
+  import { webUrl } from '$lib/links';
   import { bytes, dateTime, relativeTime } from '$lib/i18n';
   import type { Field, ItemView } from '$lib/types';
   import FieldRow from './FieldRow.svelte';
@@ -47,52 +49,6 @@
     return false;
   }
 
-  async function toggle(key: 'favorite' | 'archived') {
-    if (!c || !view) return;
-    const next = { ...c, [key]: !c[key] };
-    try {
-      await vault.bridge.saveItem(vaultId, itemId, next);
-      toast(key === 'favorite' ? (next.favorite ? '已收藏' : '已取消收藏') : next.archived ? '已归档' : '已取消归档');
-      await vault.edited();
-    } catch (e) {
-      vault.fail(e);
-    }
-  }
-
-  async function remove() {
-    if (!view) return;
-    if (!(await confirm('移到回收站？', `“${view.title}”会移到回收站，可以随时恢复。`, '移到回收站', true))) return;
-    try {
-      await vault.bridge.deleteItem(vaultId, itemId);
-      await vault.edited();
-    } catch (e) {
-      vault.fail(e);
-    }
-  }
-
-  async function restore() {
-    try {
-      await vault.bridge.restoreItem(vaultId, itemId);
-      toast('已从回收站恢复');
-      await vault.edited();
-    } catch (e) {
-      vault.fail(e);
-    }
-  }
-
-  async function purge() {
-    if (!view) return;
-    if (!(await confirm('永久删除？', `“${view.title}”及其全部历史版本和附件会从服务器上删除，无法恢复（备份里还有）。`, '永久删除', true))) return;
-    try {
-      await vault.bridge.purge(vaultId, [itemId]);
-      toast('已永久删除');
-      vault.selected = null;
-      await vault.reload();
-    } catch (e) {
-      vault.fail(e);
-    }
-  }
-
   async function resolve(conflictId: string, useOther: boolean) {
     try {
       await vault.bridge.resolveConflict(vaultId, itemId, conflictId, useOther);
@@ -132,13 +88,13 @@
       </div>
       <div class="acts">
         {#if view.deleted}
-          <button class="btn sm" onclick={restore}>恢复</button>
-          <button class="btn sm danger" onclick={purge}>永久删除</button>
+          <button class="btn sm" onclick={() => restoreFromTrash(view!)}>恢复</button>
+          <button class="btn sm danger" onclick={() => purgeItem(view!)}>永久删除</button>
         {:else}
-          <button class="btn sm" title="收藏" onclick={() => toggle('favorite')}>{c.favorite ? '★' : '☆'}</button>
+          <button class="btn sm" title="收藏" onclick={() => toggleFlag(view!, 'favorite')}>{c.favorite ? '★' : '☆'}</button>
           {#if !locked}<button class="btn sm primary" disabled={view.read_only} onclick={() => (vault.editing = { vault_id: vaultId, item_id: itemId })}>编辑</button>{/if}
-          <button class="btn sm" onclick={() => toggle('archived')}>{c.archived ? '取消归档' : '归档'}</button>
-          <button class="btn sm danger" onclick={remove}>删除</button>
+          <button class="btn sm" onclick={() => toggleFlag(view!, 'archived')}>{c.archived ? '取消归档' : '归档'}</button>
+          <button class="btn sm danger" onclick={() => moveToTrash(view!)}>删除</button>
         {/if}
       </div>
     </div>
@@ -198,7 +154,7 @@
             {#if u.url.startsWith('androidapp://')}
               <span class="grow">📱 {u.url.slice(13)}</span>{#if u.cert_sha256?.length}<span class="badge ok">签名已记录</span>{/if}
             {:else}
-              <a class="grow" href={/^https?:/.test(u.url) ? u.url : `https://${u.url}`} target="_blank" rel="noreferrer noopener">{u.url}</a>
+              <a class="grow" href={webUrl(u.url) ?? undefined} target="_blank" rel="noreferrer noopener">{u.url}</a>
             {/if}
             <span class="badge">{({ domain: '域名匹配', host: '主机匹配', starts_with: '前缀匹配', exact: '完全匹配', regex: '正则', never: '从不填写' } as Record<string, string>)[u.match] ?? u.match}</span>
           </div>
