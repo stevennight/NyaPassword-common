@@ -170,7 +170,8 @@
   {:else if section === 'security'}
     <section class="card">
       <h3>这台电脑上</h3>
-      <div class="row"><span class="grow">系统锁屏、注销、休眠时锁定</span><span class="badge ok">始终开启</span></div>
+      <label class="row"><span class="grow">系统锁屏、注销、休眠时锁定</span>
+        <input type="checkbox" checked={s.lock_on_session_lock} disabled={busyAgent} onchange={(e) => apply(() => api.setLockOnSessionLock((e.target as HTMLInputElement).checked))} /></label>
       <div class="row"><span class="grow">剪贴板中的密码 90 秒后清除<span class="faint small">（也不进入剪贴板历史和云剪贴板）</span></span><span class="badge ok">始终开启</span></div>
       {#if info.key_storage === 'file'}
         <div class="banner warn small">系统凭据存储不可用，设备密钥保存在本地文件中（{info.data_dir}）。它只受系统账户的文件权限保护。</div>

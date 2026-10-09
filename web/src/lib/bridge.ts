@@ -66,6 +66,13 @@ export interface Bridge {
   defaultServer(): string;
 
   lockState(): Promise<LockState>;
+  /**
+   * Extension: the idle auto-lock runs in the service worker, which reads the
+   * setting from extension storage (minutes, 0 = never). Elsewhere it is a
+   * per-device setting in localStorage.
+   */
+  autoLockMinutes?(): Promise<unknown>;
+  setAutoLockMinutes?(minutes: number): Promise<void>;
   register(server: string, login: string, password: string, invite?: string): Promise<EmergencyKit>;
   signIn(server: string, login: string, password: string, secretKey: string, remember: boolean): Promise<void>;
   unlock(password: string): Promise<void>;

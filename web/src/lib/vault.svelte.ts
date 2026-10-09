@@ -1,5 +1,6 @@
 // State and actions of the vault app (web vault and desktop).
 
+import { AUTO_LOCK_DEFAULT, parseAutoLock } from './autolock';
 import type { Bridge } from './bridge';
 import { errorCode, errorMessage } from './bridge';
 import { errorText } from './i18n';
@@ -41,7 +42,8 @@ class VaultState {
   syncError = $state('');
   /** Bumps when items change, so open views reload. */
   version = $state(0);
-  autoLockMinutes = $state(10);
+  /** Idle minutes before locking; 0 = never ([parseAutoLock]). */
+  autoLockMinutes = $state(AUTO_LOCK_DEFAULT);
   /** The item verified for "使用前需要验证" (`itemKey`), while it stays open. */
   verified = $state<string | null>(null);
   /** Desktop: a browser extension waits for this app to be unlocked (its browser's name). */
@@ -56,8 +58,9 @@ class VaultState {
     this.bridge = bridge;
     this.templates = bridge.templates();
     try {
-      const saved = Number(localStorage.getItem('npw.autoLock') ?? '10');
-      if (saved > 0) this.autoLockMinutes = saved;
+      // the extension keeps it where its service worker reads it
+      const saved = bridge.autoLockMinutes ? await bridge.autoLockMinutes() : localStorage.getItem('npw.autoLock');
+      this.autoLockMinutes = parseAutoLock(saved) ?? AUTO_LOCK_DEFAULT;
     } catch {
       /* storage unavailable */
     }
@@ -95,13 +98,16 @@ class VaultState {
   touch() {
     if (this.phase !== 'unlocked') return;
     clearTimeout(this.idleTimer);
-    this.idleTimer = setTimeout(() => void this.doLock(), this.autoLockMinutes * 60_000);
+    if (this.autoLockMinutes > 0) this.idleTimer = setTimeout(() => void this.doLock(), this.autoLockMinutes * 60_000);
   }
 
-  setAutoLock(minutes: number) {
-    this.autoLockMinutes = minutes;
+  async setAutoLock(minutes: number) {
+    const m = parseAutoLock(minutes);
+    if (m === null) return;
+    this.autoLockMinutes = m;
     try {
-      localStorage.setItem('npw.autoLock', String(minutes));
+      if (this.bridge.setAutoLockMinutes) await this.bridge.setAutoLockMinutes(m);
+      else localStorage.setItem('npw.autoLock', String(m));
     } catch {
       /* ignore */
     }

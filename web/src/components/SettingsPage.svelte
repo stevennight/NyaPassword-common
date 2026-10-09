@@ -6,6 +6,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { vault } from '$lib/vault.svelte';
+  import { AUTO_LOCK_MAX, autoLockLabel, autoLockOptions } from '$lib/autolock';
   import { errorCode, errorMessage } from '$lib/bridge';
   import { dateTime, errorText, relativeTime } from '$lib/i18n';
   import { confirm, toast } from '$lib/ui.svelte';
@@ -189,7 +190,30 @@
   const ACTIONS: Record<string, string> = {
     register: '注册', login: '登录', login_failed: '登录失败', password_change: '修改主密码', device_revoke: '移除设备', vault_create: '新建保险库', import: '导入', purge: '永久删除',
   };
-  const LOCK_MINUTES = [1, 5, 10, 30, 60, 240];
+  // idle auto-lock: presets or a custom number of minutes
+  let customLock = $state(false);
+  let customMinutes = $state(30);
+  const extension = !!vault.bridge?.setAutoLockMinutes;
+  function pickLock(e: Event) {
+    const v = (e.target as HTMLSelectElement).value;
+    if (v === 'custom') {
+      customLock = true;
+      customMinutes = vault.autoLockMinutes || 30;
+    } else {
+      customLock = false;
+      void vault.setAutoLock(Number(v));
+    }
+  }
+  function applyCustomLock(e: Event) {
+    e.preventDefault();
+    const m = Math.round(Number(customMinutes));
+    if (!(m >= 1 && m <= AUTO_LOCK_MAX)) {
+      toast(`请填写 1–${AUTO_LOCK_MAX} 之间的分钟数（最长 7 天）`, 'error');
+      return;
+    }
+    customLock = false;
+    void vault.setAutoLock(m);
+  }
 </script>
 
 <div class="sizer">
@@ -253,10 +277,26 @@
         <h3>自动锁定</h3>
         <div class="row">
           <span class="grow">空闲后自动锁定</span>
-          <select class="select" style="width:auto" value={vault.autoLockMinutes} onchange={(e) => vault.setAutoLock(Number((e.target as HTMLSelectElement).value))}>
-            {#each LOCK_MINUTES as m (m)}<option value={m}>{m < 60 ? `${m} 分钟` : `${m / 60} 小时`}</option>{/each}
+          <select class="select" style="width:auto" value={customLock ? 'custom' : String(vault.autoLockMinutes)} onchange={pickLock}>
+            {#each autoLockOptions(vault.autoLockMinutes) as m (m)}<option value={String(m)}>{autoLockLabel(m)}</option>{/each}
+            <option value="custom">自定义…</option>
           </select>
         </div>
+        {#if customLock}
+          <form class="row" onsubmit={applyCustomLock}>
+            <span class="grow faint small">自定义时长（1–{AUTO_LOCK_MAX} 分钟）</span>
+            <input class="input" type="number" min="1" max={AUTO_LOCK_MAX} step="1" style="width:7em" bind:value={customMinutes} />
+            <span class="small">分钟</span>
+            <button class="btn sm">应用</button>
+            <button type="button" class="btn ghost sm" onclick={() => (customLock = false)}>取消</button>
+          </form>
+        {/if}
+        <p class="faint small">
+          {#if desktop}在 NyaPassword 窗口里这段时间没有操作就锁定；系统锁屏、注销、休眠时是否锁定见下面的设置。
+          {:else if extension}这段时间没有使用扩展就锁定（打开弹窗、填写都算使用）；锁屏时是否锁定在扩展弹窗的 ⚙ 里设置。
+          {:else}这段时间没有操作就锁定。{/if}
+          {#if vault.autoLockMinutes === 0}选“从不”时只在手动锁定、锁屏或退出时锁定。{/if}
+        </p>
         {#if !desktop}<p class="faint small">复制的密码 90 秒后从剪贴板清除（浏览器允许读取剪贴板时，只清除还没被替换的内容）。</p>{/if}
       </section>
       {#if desktop}{#await import('./desktop/DesktopSettings.svelte') then m}<m.default section="security" />{/await}{/if}

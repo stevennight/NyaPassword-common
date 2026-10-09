@@ -121,6 +121,7 @@ export async function createBridge(): Promise<Bridge> {
     setPin: (pin) => call('set_pin', { pin }),
     removePin: () => call('remove_pin'),
     setBiometricAtStart: (enabled) => call('set_biometric_at_start', { enabled }),
+    setLockOnSessionLock: (enabled) => call<DesktopSettings>('set_lock_on_session_lock', { enabled }),
   };
 
   const bridge: Bridge & { desktop: DesktopApi } = {

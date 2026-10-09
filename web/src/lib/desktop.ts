@@ -78,6 +78,8 @@ export interface DesktopSettings {
   exporting: boolean;
   autostart: boolean;
   check_updates: boolean;
+  /** Lock when the system locks the session, logs off or sleeps. */
+  lock_on_session_lock: boolean;
   ssh_agent: SshAgentStatus;
   quick_access: QuickAccessSettings;
   browser_bridge: BrowserBridgeSettings;
@@ -118,6 +120,7 @@ export interface DesktopApi {
   removePin(): Promise<void>;
   /** "启动时可直接用生物识别解锁". */
   setBiometricAtStart(enabled: boolean): Promise<void>;
+  setLockOnSessionLock(enabled: boolean): Promise<DesktopSettings>;
 }
 
 /**
