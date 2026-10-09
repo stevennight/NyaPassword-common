@@ -62,6 +62,9 @@ export interface Pairing {
 
 export interface BrowserBridgeSettings {
   enabled: boolean;
+  /** The published extension (Chrome Web Store, Edge Add-ons): always allowed. */
+  store_extension_ids?: string[];
+  /** Other allowed IDs (an unpacked or self-built extension). */
   extension_ids: string[];
   pairings: Pairing[];
   running: boolean;

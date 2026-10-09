@@ -242,7 +242,8 @@ git config --global core.sshCommand "C:/Windows/System32/OpenSSH/ssh.exe"`}{/if}
       <h3>浏览器扩展联动</h3>
       <label class="row"><span class="grow">允许浏览器扩展由桌面端解锁（Native Messaging）</span>
         <input type="checkbox" checked={s.browser_bridge.enabled} disabled={busyAgent} onchange={(e) => browserBridge((e.target as HTMLInputElement).checked)} /></label>
-      <label class="lbl small" for="ext-ids">扩展 ID（每行一个；在扩展弹窗的 ⚙ 里可以看到）</label>
+      <p class="faint small">已默认允许 Chrome 应用商店和 Edge 加载项里的 NyaPassword 扩展，开启即可配对。</p>
+      <label class="lbl small" for="ext-ids">其他扩展 ID（可选，每行一个；只有自行打包或加载未打包的扩展才需要，在扩展弹窗的 ⚙ 里可以看到）</label>
       <textarea id="ext-ids" class="textarea mono small" rows="2" bind:value={extIds} spellcheck="false"></textarea>
       <div class="row">
         <span class="grow faint small">配对后：桌面端已解锁时，扩展打开即可解锁；桌面端锁定时，已连接的扩展也会锁定。</span>
@@ -259,7 +260,7 @@ git config --global core.sshCommand "C:/Windows/System32/OpenSSH/ssh.exe"`}{/if}
           <button class="btn ghost sm danger" onclick={() => unpair(p.id, p.name)}>取消配对</button>
         </div>
       {:else}
-        <p class="faint small">还没有配对的扩展。开启上面的联动并填好扩展 ID 后，在扩展里选择用桌面端解锁，桌面端会弹窗确认配对。</p>
+        <p class="faint small">还没有配对的扩展。开启上面的联动后，在扩展里选择用桌面端解锁，桌面端会弹窗确认配对。</p>
       {/each}
     </section>
   {:else if section === 'export'}
