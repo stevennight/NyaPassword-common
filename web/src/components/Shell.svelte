@@ -67,7 +67,7 @@
     {:else if vault.page === 'security'}<SecurityPage />
     {:else if vault.page === 'settings'}<SettingsPage />
     {:else if vault.page === 'import'}<ImportPage />
-    {:else if vault.page === 'generator'}<h2 class="gh">密码生成器</h2><Generator inline />{/if}
+    {:else if vault.page === 'generator'}<h2 class="gh">生成器</h2><Generator inline />{/if}
   </main>
 </div>
 

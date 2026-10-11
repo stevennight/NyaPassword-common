@@ -55,7 +55,7 @@
   {/if}
 
   <h4>其他</h4>
-  <button class="nav" class:on={vault.page === 'generator'} onclick={() => (vault.page = 'generator')}>⚿ 密码生成器</button>
+  <button class="nav" class:on={vault.page === 'generator'} onclick={() => (vault.page = 'generator')}>⚿ 生成器</button>
   <button class="nav" class:on={vault.page === 'security'} onclick={() => (vault.page = 'security')}>🛡 安全检查</button>
   <button class="nav" class:on={isOn({ kind: 'archived' })} onclick={() => vault.setNav({ kind: 'archived' })}>🗄 归档</button>
   <button class="nav" class:on={isOn({ kind: 'trash' })} onclick={() => vault.setNav({ kind: 'trash' })}>🗑 回收站</button>
