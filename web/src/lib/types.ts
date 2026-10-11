@@ -239,9 +239,11 @@ export interface TemplateInfo {
 export type Recipe =
   | { kind: 'random'; length: number; upper: boolean; lower: boolean; digits: boolean; symbols: boolean; avoid_ambiguous: boolean }
   | { kind: 'memorable'; words: number; separator: string; capitalize: boolean; digits: boolean }
-  | { kind: 'pin'; length: number };
+  | { kind: 'pin'; length: number }
+  | { kind: 'username'; style: 'words' | 'name'; words: number; separator: string; capitalize: boolean; digits: boolean };
 
 export interface Generated {
+  /** The generated value (a username for `kind: 'username'`). */
   password: string;
   bits: number;
 }

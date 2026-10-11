@@ -142,6 +142,8 @@
   }
 
   const secretKinds = ['concealed', 'pin'];
+  /** The field the generator is open for (a password, or a username field). */
+  const genField = $derived(genFor ? c?.fields.find((x) => x.id === genFor) : undefined);
   const ADDRESS_PARTS: [string, string][] = [['province', '省'], ['city', '市'], ['district', '区'], ['street', '详细地址'], ['postal_code', '邮编'], ['country', '国家']];
 </script>
 
@@ -197,6 +199,8 @@
               {#if secretKinds.includes(f.kind)}
                 <button class="btn ghost sm" title="显示" onclick={() => (reveal[f.id] = !reveal[f.id])}>{reveal[f.id] ? '🙈' : '👁'}</button>
                 <button class="btn ghost sm" title="生成" onclick={() => (genFor = f.id)}>⚿</button>
+              {:else if f.purpose === 'username'}
+                <button class="btn ghost sm" title="生成用户名" onclick={() => (genFor = f.id)}>⚿</button>
               {/if}
               <select class="kind" value={f.kind} onchange={(e) => { f.kind = (e.target as HTMLSelectElement).value; mark(); }} title="字段类型">
                 {#each KINDS as [k, l] (k)}<option value={k}>{l}</option>{/each}
@@ -300,7 +304,7 @@
   </div>
 
   {#if genFor}
-    <Generator onclose={() => (genFor = null)} onuse={(pw) => { const f = c!.fields.find((x) => x.id === genFor); if (f) { f.value = pw; reveal[f.id] = true; mark(); } genFor = null; }} />
+    <Generator start={genField && !secretKinds.includes(genField.kind) ? 'username' : 'random'} onclose={() => (genFor = null)} onuse={(pw) => { const f = c!.fields.find((x) => x.id === genFor); if (f) { f.value = pw; reveal[f.id] = true; mark(); } genFor = null; }} />
   {/if}
 {/if}
 

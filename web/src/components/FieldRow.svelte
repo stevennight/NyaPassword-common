@@ -5,6 +5,7 @@
   import { vault } from '$lib/vault.svelte';
   import type { Field } from '$lib/types';
   import TotpCode from './TotpCode.svelte';
+  import PwChars from './PwChars.svelte';
   import Modal from './Modal.svelte';
 
   let { field }: { field: Field } = $props();
@@ -57,6 +58,8 @@
       ••••••••••••{#if field.multiline && lines.length > 1}<span class="faint small">（{lines.length} 行，已隐藏）</span>{/if}
     {:else if field.multiline || field.kind === 'multiline'}
       <div class="pre">{text}</div>
+    {:else if field.kind === 'concealed'}
+      <PwChars {text} />
     {:else if isUrl}
       <a href={text} target="_blank" rel="noreferrer noopener">{text}</a>
     {:else if field.kind === 'reference'}
@@ -83,9 +86,7 @@
         <div class="line"><span class="mono grow">{l}</span><button class="btn sm" onclick={() => copy(l, `第 ${i + 1} 行`)}>复制</button></div>
       {/each}
     {:else}
-      <div class="big mono">
-        {#each [...text] as ch, i (i)}<span class:digit={/\d/.test(ch)} class:sym={/[^\w]/.test(ch)}>{ch}</span>{/each}
-      </div>
+      <div class="big mono"><PwChars {text} /></div>
     {/if}
   </Modal>
 {/if}
@@ -103,6 +104,4 @@
   .t:hover { background: var(--surface-3); color: var(--accent); }
   .line { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
   .big { font-size: 34px; letter-spacing: .12em; word-break: break-all; text-align: center; padding: 20px 0; }
-  .big .digit { color: var(--accent); }
-  .big .sym { color: var(--warn); }
 </style>
