@@ -7,12 +7,14 @@
 //! - [`transport`](crate::transport): HTTP.
 //! - [`search`], [`generator`], [`security`]: search with pinyin, password
 //!   generator, security report.
+//! - [`organize`]: bulk edits, tag renaming, duplicate detection and merging.
 
 mod api;
 pub mod client;
 pub mod generator;
 pub mod health;
 mod items;
+pub mod organize;
 pub mod passkeys;
 pub mod pin;
 mod remote;
@@ -28,6 +30,9 @@ pub use client::{
 };
 pub use health::HealthReport;
 pub use items::ItemFilter;
+pub use organize::{
+    BulkAction, BulkReport, DuplicateGroup, ItemRef, MergeReport, Skipped, TagCount,
+};
 pub use pin::PinBlob;
 pub use remote::{ImportResult, IMPORT_KEY};
 pub use security::{Finding, Issue, SecurityReport};

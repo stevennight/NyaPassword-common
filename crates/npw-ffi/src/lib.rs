@@ -350,6 +350,41 @@ impl NpwClient {
         to_json(&self.inner.tags()?)
     }
 
+    /// `TagCount[]` JSON: tags in use with how many items carry each.
+    pub fn tag_counts(&self) -> Res<String> {
+        to_json(&self.inner.tag_counts()?)
+    }
+
+    /// One action on many items: `items_json` is `ItemRef[]`, `action_json` a
+    /// `BulkAction`; returns `BulkReport` JSON.
+    pub fn bulk_update(&self, items_json: String, action_json: String) -> Res<String> {
+        let items: Vec<npw_core::ItemRef> = from_json(&items_json)?;
+        let action: npw_core::BulkAction = from_json(&action_json)?;
+        to_json(&self.inner.bulk_update(&items, &action)?)
+    }
+
+    /// `BulkReport` JSON.
+    pub fn rename_tag(&self, from: String, to: String) -> Res<String> {
+        to_json(&self.inner.rename_tag(&from, &to)?)
+    }
+
+    /// `BulkReport` JSON.
+    pub fn delete_tag(&self, tag: String) -> Res<String> {
+        to_json(&self.inner.delete_tag(&tag)?)
+    }
+
+    /// `DuplicateGroup[]` JSON.
+    pub fn duplicates(&self) -> Res<String> {
+        to_json(&self.inner.duplicates()?)
+    }
+
+    /// Merges `others_json` (`ItemRef[]`) into `keep_json` (`ItemRef`); `MergeReport` JSON.
+    pub fn merge_items(&self, keep_json: String, others_json: String) -> Res<String> {
+        let keep: npw_core::ItemRef = from_json(&keep_json)?;
+        let others: Vec<npw_core::ItemRef> = from_json(&others_json)?;
+        to_json(&self.block(self.inner.merge_items(&keep, &others))?)
+    }
+
     /// A new, unsaved item of a template (`ItemContent` JSON).
     pub fn new_item(&self, template: String) -> Res<String> {
         let t = npw_model::template(&template).ok_or_else(|| invalid("unknown template"))?;

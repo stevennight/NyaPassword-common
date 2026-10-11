@@ -5,6 +5,12 @@
 
 import type {
   AuditEntry,
+  BulkAction,
+  BulkReport,
+  DuplicateGroup,
+  ItemRef,
+  MergeReport,
+  TagCount,
   DeviceRecord,
   EmergencyKit,
   Field,
@@ -104,6 +110,17 @@ export interface Bridge {
   listItems(filter: ItemFilter): Promise<ItemView[]>;
   item(vaultId: string, itemId: string): Promise<ItemView>;
   tags(): Promise<string[]>;
+  /** Tags in use (with the parents of nested tags) and how many items carry each. */
+  tagCounts(): Promise<TagCount[]>;
+  /** One action on many items, written in one local transaction. */
+  bulkUpdate(items: ItemRef[], action: BulkAction): Promise<BulkReport>;
+  /** Renames a tag and its sub-tags on every item (renaming onto an existing tag merges them). */
+  renameTag(from: string, to: string): Promise<BulkReport>;
+  /** Removes a tag and its sub-tags from every item. */
+  deleteTag(tag: string): Promise<BulkReport>;
+  duplicates(): Promise<DuplicateGroup[]>;
+  /** Merges `others` into `keep` and moves them to the trash; copying attachments needs the server. */
+  mergeItems(keep: ItemRef, others: ItemRef[]): Promise<MergeReport>;
   newItem(template: string): Promise<ItemContent>;
   saveItem(vaultId: string, itemId: string | null, content: ItemContent): Promise<string>;
   deleteItem(vaultId: string, itemId: string): Promise<void>;

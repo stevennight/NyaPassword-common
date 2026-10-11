@@ -18,7 +18,7 @@ export type Nav =
   | { kind: 'template'; id: string }
   | { kind: 'tag'; id: string };
 
-export type Page = 'items' | 'security' | 'settings' | 'import' | 'generator';
+export type Page = 'items' | 'security' | 'organize' | 'settings' | 'import' | 'generator';
 
 class VaultState {
   bridge!: Bridge;
@@ -29,9 +29,15 @@ class VaultState {
   templates = $state<TemplateInfo[]>([]);
   nav = $state<Nav>({ kind: 'all' });
   page = $state<Page>('items');
+  /** The tab the 整理 page opens on. */
+  organizeTab = $state<'duplicates' | 'tags'>('duplicates');
   query = $state('');
   items = $state<ItemView[]>([]);
   selected = $state<{ vault_id: string; item_id: string } | null>(null);
+  /** Multi-select in the list: on while choosing items for a bulk action. */
+  selecting = $state(false);
+  /** Chosen items (`itemKey`), in the order they were picked. */
+  picked = $state<string[]>([]);
   editing = $state<{ vault_id: string; item_id: string | null } | null>(null);
   /** Template and vault for a new item (when editing.item_id is null). */
   newTemplate = $state('login');
@@ -92,6 +98,7 @@ class VaultState {
     this.selected = null;
     this.editing = null;
     this.verified = null;
+    this.clearPicks();
     this.phase = 'locked';
   }
 
@@ -137,6 +144,11 @@ class VaultState {
         this.bridge.attention(),
       ]);
       this.items = items;
+      // picked items that left the list (trashed, filtered out) are no longer picked
+      if (this.picked.length) {
+        const shown = new Set(items.map((i) => itemKey(i.vault_id, i.item_id)));
+        this.picked = this.picked.filter((k) => shown.has(k));
+      }
       this.vaults = vaults;
       this.tags = tags;
       this.attention = attention;
@@ -153,6 +165,7 @@ class VaultState {
     this.nav = n;
     this.page = 'items';
     this.editing = null;
+    this.clearPicks();
     await this.reload();
     this.selected = this.items[0] ? { vault_id: this.items[0].vault_id, item_id: this.items[0].item_id } : null;
   }
@@ -163,6 +176,43 @@ class VaultState {
     if (this.items[0] && !this.items.some((i) => i.item_id === this.selected?.item_id)) {
       this.selected = { vault_id: this.items[0].vault_id, item_id: this.items[0].item_id };
     }
+  }
+
+  isPicked(v: { vault_id: string; item_id: string }): boolean {
+    return this.picked.includes(itemKey(v.vault_id, v.item_id));
+  }
+
+  togglePick(v: { vault_id: string; item_id: string }) {
+    const k = itemKey(v.vault_id, v.item_id);
+    this.selecting = true;
+    this.picked = this.picked.includes(k) ? this.picked.filter((x) => x !== k) : [...this.picked, k];
+  }
+
+  /** Picks every item between `from` and `to` in the list (both included). */
+  pickRange(from: { vault_id: string; item_id: string }, to: { vault_id: string; item_id: string }) {
+    const keys = this.items.map((i) => itemKey(i.vault_id, i.item_id));
+    const a = keys.indexOf(itemKey(from.vault_id, from.item_id));
+    const b = keys.indexOf(itemKey(to.vault_id, to.item_id));
+    if (a < 0 || b < 0) return this.togglePick(to);
+    const range = keys.slice(Math.min(a, b), Math.max(a, b) + 1);
+    this.selecting = true;
+    this.picked = [...this.picked, ...range.filter((k) => !this.picked.includes(k))];
+  }
+
+  pickAll() {
+    this.selecting = true;
+    this.picked = this.items.map((i) => itemKey(i.vault_id, i.item_id));
+  }
+
+  clearPicks() {
+    this.selecting = false;
+    this.picked = [];
+  }
+
+  /** The picked items as listed (list order). */
+  pickedItems(): ItemView[] {
+    const set = new Set(this.picked);
+    return this.items.filter((i) => set.has(itemKey(i.vault_id, i.item_id)));
   }
 
   /** An item was opened: a verification of another item ends. */

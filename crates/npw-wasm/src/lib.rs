@@ -211,6 +211,44 @@ impl NpwClient {
         to_js(&self.inner.tags().map_err(js_err)?)
     }
 
+    /// Tags with item counts (`TagCount[]`).
+    #[wasm_bindgen(js_name = tagCounts)]
+    pub fn tag_counts(&self) -> Result<JsValue, JsValue> {
+        to_js(&self.inner.tag_counts().map_err(js_err)?)
+    }
+
+    /// One action on many items (`ItemRef[]`, `BulkAction`) → `BulkReport`.
+    #[wasm_bindgen(js_name = bulkUpdate)]
+    pub fn bulk_update(&self, items: JsValue, action: JsValue) -> Result<JsValue, JsValue> {
+        let items: Vec<npw_core::ItemRef> = from_js(items)?;
+        let action: npw_core::BulkAction = from_js(action)?;
+        to_js(&self.inner.bulk_update(&items, &action).map_err(js_err)?)
+    }
+
+    #[wasm_bindgen(js_name = renameTag)]
+    pub fn rename_tag(&self, from: &str, to: &str) -> Result<JsValue, JsValue> {
+        to_js(&self.inner.rename_tag(from, to).map_err(js_err)?)
+    }
+
+    #[wasm_bindgen(js_name = deleteTag)]
+    pub fn delete_tag(&self, tag: &str) -> Result<JsValue, JsValue> {
+        to_js(&self.inner.delete_tag(tag).map_err(js_err)?)
+    }
+
+    /// `DuplicateGroup[]`.
+    pub fn duplicates(&self) -> Result<JsValue, JsValue> {
+        to_js(&self.inner.duplicates().map_err(js_err)?)
+    }
+
+    /// Merges `others` (`ItemRef[]`) into `keep` (`ItemRef`) → `MergeReport`.
+    #[wasm_bindgen(js_name = mergeItems)]
+    pub async fn merge_items(&self, keep: JsValue, others: JsValue) -> Result<JsValue, JsValue> {
+        let keep: npw_core::ItemRef = from_js(keep)?;
+        let others: Vec<npw_core::ItemRef> = from_js(others)?;
+        let c = self.inner.clone();
+        to_js(&c.merge_items(&keep, &others).await.map_err(js_err)?)
+    }
+
     /// A new item of a template (not saved).
     #[wasm_bindgen(js_name = newItem)]
     pub fn new_item(&self, template: &str, locale: &str) -> Result<JsValue, JsValue> {

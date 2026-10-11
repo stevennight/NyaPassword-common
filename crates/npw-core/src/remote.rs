@@ -132,6 +132,28 @@ impl Client {
         let (_, _) = self
             .cached_content(vault_id, item_id)
             .ok_or(CoreError::NotFound)?;
+        let att = self
+            .upload_attachment(vault_id, item_id, name, mime, data)
+            .await?;
+        let att_id = att.id.clone();
+        let (mut content, _) = self
+            .cached_content(vault_id, item_id)
+            .ok_or(CoreError::NotFound)?;
+        content.attachments.push(att);
+        self.save_item(vault_id, Some(item_id), content)?;
+        Ok(att_id)
+    }
+
+    /// Encrypts and uploads a file for an item; returns the attachment entry
+    /// to put into the item's content (the item itself is not changed).
+    pub(crate) async fn upload_attachment(
+        &self,
+        vault_id: &str,
+        item_id: &str,
+        name: &str,
+        mime: &str,
+        data: &[u8],
+    ) -> Result<Attachment> {
         let att_id = uuid::Uuid::new_v4().to_string();
         let fk = Key32::generate();
         let blob = stream::encrypt(&fk, &aad::attachment(&uuid_bytes(&att_id)?), data);
@@ -151,11 +173,8 @@ impl Client {
         }
         self.store
             .apply(vec![StoreOp::PutBlob(format!("att/{att_id}"), blob)])?;
-        let (mut content, _) = self
-            .cached_content(vault_id, item_id)
-            .ok_or(CoreError::NotFound)?;
-        content.attachments.push(Attachment {
-            id: att_id.clone(),
+        Ok(Attachment {
+            id: att_id,
             name: name.to_string(),
             size: data.len() as u64,
             mime: mime.to_string(),
@@ -163,9 +182,7 @@ impl Client {
             blob_sha256: sha,
             created_at: npw_model::now_ms(),
             extra: Default::default(),
-        });
-        self.save_item(vault_id, Some(item_id), content)?;
-        Ok(att_id)
+        })
     }
 
     /// Decrypted attachment content (downloaded once, then cached encrypted).

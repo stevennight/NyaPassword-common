@@ -1,6 +1,23 @@
 <script lang="ts">
   import { vault, type Nav } from '$lib/vault.svelte';
   import { TEMPLATE_ICONS } from '$lib/ui.svelte';
+  import { openMenu } from '$lib/menu.svelte';
+  import { deleteTag, renameTag } from '$lib/bulk.svelte';
+
+  function tagMenu(e: MouseEvent, t: string) {
+    openMenu(e, [
+      { label: '重命名…', run: () => renameTag(t) },
+      { label: '删除标签…', danger: true, run: () => deleteTag(t) },
+      null,
+      { label: '管理标签', run: () => openOrganize('tags') },
+    ]);
+  }
+
+  function openOrganize(tab: 'duplicates' | 'tags') {
+    vault.organizeTab = tab;
+    vault.clearPicks();
+    vault.page = 'organize';
+  }
 
   const isOn = (n: Nav) => {
     const c = vault.nav;
@@ -50,13 +67,14 @@
   {#if tagTree.length}
     <h4>标签</h4>
     {#each tagTree as t (t)}
-      <button class="nav" class:on={isOn({ kind: 'tag', id: t })} onclick={() => vault.setNav({ kind: 'tag', id: t })}># {t}</button>
+      <button class="nav" class:on={isOn({ kind: 'tag', id: t })} onclick={() => vault.setNav({ kind: 'tag', id: t })} oncontextmenu={(e) => tagMenu(e, t)}># {t}</button>
     {/each}
   {/if}
 
   <h4>其他</h4>
   <button class="nav" class:on={vault.page === 'generator'} onclick={() => (vault.page = 'generator')}>⚿ 生成器</button>
   <button class="nav" class:on={vault.page === 'security'} onclick={() => (vault.page = 'security')}>🛡 安全检查</button>
+  <button class="nav" class:on={vault.page === 'organize'} onclick={() => openOrganize('duplicates')}>🧹 整理</button>
   <button class="nav" class:on={isOn({ kind: 'archived' })} onclick={() => vault.setNav({ kind: 'archived' })}>🗄 归档</button>
   <button class="nav" class:on={isOn({ kind: 'trash' })} onclick={() => vault.setNav({ kind: 'trash' })}>🗑 回收站</button>
   <button class="nav" class:on={vault.page === 'import'} onclick={() => (vault.page = 'import')}>⇪ 导入 / 导出</button>

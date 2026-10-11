@@ -22,10 +22,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Args;
-use npw_core::{Client, CoreError, ItemFilter, Store, SyncReport};
+use npw_core::{BulkAction, Client, CoreError, ItemFilter, ItemRef, ItemView, Store, SyncReport};
 use npw_model::{Field, ItemContent};
 use npw_store_sqlite::SqliteStore;
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 
 use crate::profile::Profile;
@@ -115,6 +116,8 @@ struct Stats {
     edits: usize,
     deletes: usize,
     restores: usize,
+    /// Bulk edits, tag renames and merges.
+    organized: usize,
     restarts: usize,
     offline: usize,
     syncs: usize,
@@ -133,6 +136,7 @@ impl Stats {
         self.creates += o.creates;
         self.edits += o.edits;
         self.deletes += o.deletes;
+        self.organized += o.organized;
         self.restores += o.restores;
         self.restarts += o.restarts;
         self.offline += o.offline;
@@ -159,8 +163,14 @@ impl Stats {
 
     fn print(&self) {
         println!(
-            "  ops:    {} creates, {} edits, {} deletes, {} restores, {} restarts, {} offline stretches",
-            self.creates, self.edits, self.deletes, self.restores, self.restarts, self.offline
+            "  ops:    {} creates, {} edits, {} deletes, {} restores, {} tidy-ups, {} restarts, {} offline stretches",
+            self.creates,
+            self.edits,
+            self.deletes,
+            self.restores,
+            self.organized,
+            self.restarts,
+            self.offline
         );
         println!(
             "  syncs:  {} completed, {} cancelled, {} failed; pushed {}, pulled {}, merged {}, conflicts {}, rejected {}, full resyncs {}",
@@ -289,8 +299,8 @@ fn login_item(dev: &mut Device) -> ItemContent {
     it
 }
 
-/// One random local edit. `roll` in 0..68 picks the kind (create 15, edit 45, delete 5, restore 3).
-fn random_edit(
+/// One random local edit. `roll` in 0..68 picks the kind (tidy-up 3, create 12, edit 45, delete 5, restore 3).
+async fn random_edit(
     dev: &mut Device,
     vault: &str,
     roll: u32,
@@ -307,6 +317,7 @@ fn random_edit(
         ..Default::default()
     })?;
     match roll {
+        0..=2 if items.len() >= 2 => organize(dev, vault, &items, rng, st).await?,
         15..=59 if !items.is_empty() => {
             let id = items[rng.gen_range(0..items.len())].item_id.clone();
             let mut c = dev
@@ -357,6 +368,62 @@ fn random_edit(
             st.creates += 1;
         }
     }
+    Ok(())
+}
+
+/// A tidy-up (npw-core organize.rs): a bulk tag or favorite edit, a tag
+/// rename, or merging two items. Old values stay in the revision history or,
+/// for merged items, in the trash.
+async fn organize(
+    dev: &mut Device,
+    vault: &str,
+    items: &[ItemView],
+    rng: &mut StdRng,
+    st: &mut Stats,
+) -> Result<()> {
+    let n = rng.gen_range(2..=items.len().min(4));
+    let picked: Vec<&ItemView> = items.choose_multiple(rng, n).collect();
+    let refs: Vec<ItemRef> = picked
+        .iter()
+        .map(|v| ItemRef::new(vault, &v.item_id))
+        .collect();
+    match rng.gen_range(0..4) {
+        0 => {
+            let t = dev.tok();
+            dev.client
+                .bulk_update(&refs, &BulkAction::AddTags { tags: vec![t] })?;
+        }
+        1 => {
+            let on = rng.gen_bool(0.5);
+            dev.client
+                .bulk_update(&refs, &BulkAction::Favorite { on })?;
+        }
+        2 => {
+            let tags = dev.client.tags()?;
+            let Some(from) = tags.choose(rng).cloned() else {
+                return Ok(());
+            };
+            let to = dev.tok();
+            dev.client.rename_tag(&from, &to)?;
+        }
+        _ => {
+            // items with unresolved sync conflicts cannot be merged
+            let ok: Vec<&ItemRef> = refs
+                .iter()
+                .zip(&picked)
+                .filter(|(_, v)| v.conflicts == 0)
+                .map(|(r, _)| r)
+                .collect();
+            if ok.len() < 2 {
+                return Ok(());
+            }
+            dev.client
+                .merge_items(ok[0], std::slice::from_ref(ok[1]))
+                .await
+                .with_context(|| format!("{} merge", dev.name))?;
+        }
+    }
+    st.organized += 1;
     Ok(())
 }
 
@@ -661,6 +728,7 @@ async fn run_device(
         let roll = rng.gen_range(0..100);
         match roll {
             0..=67 => random_edit(&mut dev, &vault, roll, &mut rng, &mut st)
+                .await
                 .with_context(|| format!("{} step {step}", dev.name))?,
             68..=70 => {
                 dev.restart()?;
@@ -861,7 +929,7 @@ pub async fn run_kill_test(a: KillArgs) -> Result<()> {
         for dev in devices.iter_mut() {
             for _ in 0..a.edits {
                 let roll = rng.gen_range(0..68);
-                random_edit(dev, &vault, roll, &mut rng, &mut st)?;
+                random_edit(dev, &vault, roll, &mut rng, &mut st).await?;
             }
         }
         // everyone pushes at once; the server dies somewhere in the middle

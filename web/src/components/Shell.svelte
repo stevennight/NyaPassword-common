@@ -9,6 +9,10 @@
   import SettingsPage from './SettingsPage.svelte';
   import ImportPage from './ImportPage.svelte';
   import Generator from './Generator.svelte';
+  import OrganizePage from './OrganizePage.svelte';
+  import BulkPanel from './BulkPanel.svelte';
+  import MergeDialog from './MergeDialog.svelte';
+  import { mergeState } from '$lib/bulk.svelte';
 
   let navOpen = $state(false);
   let now = $state(Date.now());
@@ -16,7 +20,9 @@
 
   const editKey = $derived(vault.editing ? vault.editing.vault_id + (vault.editing.item_id ?? 'new' + vault.newTemplate) : '');
   const selKey = $derived(vault.selected?.item_id ?? '');
-  const showingDetail = $derived(vault.page !== 'items' || !!vault.editing || !!vault.selected);
+  const bulk = $derived(vault.selecting && vault.picked.length > 0 && !vault.editing);
+  // phone: while picking items the list stays on screen (its bar has the actions)
+  const showingDetail = $derived(vault.page !== 'items' || !!vault.editing || (!!vault.selected && !vault.selecting));
 
   // close the drawer whenever the user navigates
   $effect(() => {
@@ -28,6 +34,7 @@
   function back() {
     if (vault.page !== 'items') vault.page = 'items';
     else if (vault.editing) vault.editing = null;
+    else if (vault.selecting) vault.clearPicks();
     else vault.selected = null;
   }
 </script>
@@ -55,7 +62,9 @@
   {/if}
   <main class="main">
     {#if vault.page === 'items'}
-      {#if vault.editing}
+      {#if bulk}
+        <BulkPanel />
+      {:else if vault.editing}
         {@const ed = vault.editing}
         {#key editKey}<ItemEditor vaultId={ed.vault_id} itemId={ed.item_id} />{/key}
       {:else if vault.selected}
@@ -65,11 +74,14 @@
         <div class="empty faint">选择或新建一个条目</div>
       {/if}
     {:else if vault.page === 'security'}<SecurityPage />
+    {:else if vault.page === 'organize'}<OrganizePage />
     {:else if vault.page === 'settings'}<SettingsPage />
     {:else if vault.page === 'import'}<ImportPage />
     {:else if vault.page === 'generator'}<h2 class="gh">生成器</h2><Generator inline />{/if}
   </main>
 </div>
+
+{#if mergeState.items}<MergeDialog items={mergeState.items} onclose={() => (mergeState.items = null)} />{/if}
 
 <style>
   .shell {

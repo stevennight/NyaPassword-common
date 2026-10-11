@@ -157,6 +157,48 @@ export interface ItemFilter {
   query?: string;
 }
 
+export interface ItemRef {
+  vault_id: string;
+  item_id: string;
+}
+
+export type BulkAction =
+  | { kind: 'add_tags'; tags: string[] }
+  | { kind: 'remove_tags'; tags: string[] }
+  | { kind: 'favorite'; on: boolean }
+  | { kind: 'archive'; on: boolean }
+  | { kind: 'trash' }
+  | { kind: 'restore' };
+
+export interface BulkReport {
+  changed: number;
+  unchanged: number;
+  /** `reason`: `read_only` (written by a newer version) or `not_found`. */
+  skipped: { vault_id: string; item_id: string; title: string; reason: string }[];
+}
+
+export interface TagCount {
+  tag: string;
+  items: number;
+}
+
+export interface DuplicateGroup {
+  /** Shared site; empty when grouped by title or content. */
+  site: string;
+  username: string;
+  /** Newest first: the first is the suggested item to keep. */
+  items: ItemView[];
+  same_password: boolean;
+  identical: boolean;
+}
+
+export interface MergeReport {
+  kept: ItemRef | null;
+  trashed: number;
+  attachments_copied: number;
+  secrets_to_history: number;
+}
+
 export interface SyncReport {
   pulled: number;
   pushed: number;

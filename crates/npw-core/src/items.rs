@@ -236,6 +236,16 @@ impl CachedItem {
     }
 }
 
+/// One item edit for [`Client::write_pending_many`].
+pub(crate) struct PendingWrite {
+    pub vault_id: String,
+    pub item_id: String,
+    pub vk: Key32,
+    pub ik: Key32,
+    pub content: ItemContent,
+    pub deleted: bool,
+}
+
 /// Which items [`Client::list_items`] returns.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ItemFilter {
@@ -389,37 +399,56 @@ impl Client {
         content: &ItemContent,
         deleted: bool,
     ) -> Result<()> {
-        let (wrapped_key, ciphertext, format_major) =
-            seal_item(vk, vault_id, item_id, ik, content)?;
-        let existing = self.store.get_item(vault_id, item_id)?;
-        let base_revision = existing
-            .as_ref()
-            .and_then(|li| li.server.as_ref())
-            .map(|r| r.revision)
-            .unwrap_or(0);
-        let (server, seen) = existing.map(|li| (li.server, li.seen)).unwrap_or_default();
-        let li = LocalItem {
+        self.write_pending_many(vec![PendingWrite {
             vault_id: vault_id.to_string(),
             item_id: item_id.to_string(),
-            server,
-            seen,
-            pending: Some(PendingEdit {
-                op_id: uuid::Uuid::new_v4().to_string(),
-                base_revision,
-                deleted,
-                format_major,
-                wrapped_key,
-                ciphertext,
-                created_at: npw_model::now_ms(),
-                rejected: None,
-            }),
-        };
-        self.store.apply(vec![StoreOp::PutItem(li.clone())])?;
-        self.state
-            .lock()
-            .expect("state")
-            .cache
-            .refresh_item(vk, &li);
+            vk: vk.clone(),
+            ik: ik.clone(),
+            content: content.clone(),
+            deleted,
+        }])
+    }
+
+    /// Writes pending edits for several items in one store transaction (all or
+    /// nothing), then refreshes the cache.
+    pub(crate) fn write_pending_many(&self, writes: Vec<PendingWrite>) -> Result<()> {
+        let mut items = Vec::with_capacity(writes.len());
+        for w in &writes {
+            let (wrapped_key, ciphertext, format_major) =
+                seal_item(&w.vk, &w.vault_id, &w.item_id, &w.ik, &w.content)?;
+            let existing = self.store.get_item(&w.vault_id, &w.item_id)?;
+            let base_revision = existing
+                .as_ref()
+                .and_then(|li| li.server.as_ref())
+                .map(|r| r.revision)
+                .unwrap_or(0);
+            let (server, seen) = existing.map(|li| (li.server, li.seen)).unwrap_or_default();
+            items.push(LocalItem {
+                vault_id: w.vault_id.clone(),
+                item_id: w.item_id.clone(),
+                server,
+                seen,
+                pending: Some(PendingEdit {
+                    op_id: uuid::Uuid::new_v4().to_string(),
+                    base_revision,
+                    deleted: w.deleted,
+                    format_major,
+                    wrapped_key,
+                    ciphertext,
+                    created_at: npw_model::now_ms(),
+                    rejected: None,
+                }),
+            });
+        }
+        if items.is_empty() {
+            return Ok(());
+        }
+        self.store
+            .apply(items.iter().cloned().map(StoreOp::PutItem).collect())?;
+        let mut st = self.state.lock().expect("state");
+        for (w, li) in writes.iter().zip(&items) {
+            st.cache.refresh_item(&w.vk, li);
+        }
         Ok(())
     }
 
